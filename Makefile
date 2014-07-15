@@ -7,7 +7,7 @@
 
 OBJS = 
 
-EXENAME = particles
+EXENAME = billiards
 
 COMMONSRC=esShader.c    \
           esTransform.c \
@@ -15,7 +15,7 @@ COMMONSRC=esShader.c    \
           esUtil.c
 
 vpath %.c ../src
-vpath %.h   ../include
+vpath %.h ../include
 
 CC = gcc
 CFLAGS=-Wall
@@ -32,11 +32,11 @@ all: $(EXENAME)
 clean:
 	-rm *.o $(EXENAME)
 
-$(EXENAME) : particles.o esShader.o esShapes.o esTransform.o esUtil.o glesTools.o
+$(EXENAME) : billiards.o esShader.o esShapes.o esTransform.o esUtil.o glesTools.o
 	$(CC) ${CFLAGS} ${DEFINES} $^ -o ./$@ ${LIBS}
 glesTools.o : glesTools.c glesTools.h
 	$(CC) ${CFLAGS} ${DEFINES} -c $< -o ./$@ ${INCDIR} ${LIBS}
-particles.o : particles.c esShader.o esShapes.o esTransform.o esUtil.o esUtil.h
+billiards.o : billiards.c esShader.o esShapes.o esTransform.o esUtil.o esUtil.h
 	$(CC) ${CFLAGS} ${DEFINES} -c $< -o ./$@ ${INCDIR} ${LIBS}
 esShader.o : esShader.c
 	$(CC) ${CFLAGS} ${DEFINES} -c $< -o ./$@ ${INCDIR} ${LIBS}
