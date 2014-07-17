@@ -19,7 +19,7 @@
 #include "esUtil.h"
 #include "glesTools.h"
 
-#define NUM_PARTICLES	1000
+#define NUM_PARTICLES	16
 #define PARTICLE_SIZE   4
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
@@ -172,7 +172,7 @@ int InitFBO ( ESContext *esContext )
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    
+
     return TRUE;
 }
 
@@ -181,8 +181,8 @@ int InitParticles ( ESContext *esContext )
     UserData *userData = esContext->userData;
     int i;
 
-    char * vShaderStr = loadShader( "shader/particles.vert" );
-    char * fShaderStr = loadShader( "shader/particles.frag" );
+    char * vShaderStr = loadShader( "shader/billiards.vert" );
+    char * fShaderStr = loadShader( "shader/billiards.frag" );
 
     // Load the shaders and get a linked program object
     userData->particlesProgram = esLoadProgram ( vShaderStr, fShaderStr );
@@ -201,19 +201,48 @@ int InitParticles ( ESContext *esContext )
     userData->particlesSamplerLoc = glGetUniformLocation ( userData->particlesProgram, "s_texture" );
     // Fill in particle data array
     srand ( 0 );
+    float ballSize = 0.05f;
+    float poolPts [] = {
+              -0.5,        0.0f, // white ball
+
+              0.0f,        0.0f, // row 1
+
+          ballSize,   -ballSize, // row 2
+          ballSize,    ballSize,
+
+        2*ballSize, -2*ballSize, // row 3
+        2*ballSize,        0.0f,
+        2*ballSize,  2*ballSize,
+
+        3*ballSize, -3*ballSize, // row 4
+        3*ballSize,   -ballSize,
+        3*ballSize,    ballSize,
+        3*ballSize,  3*ballSize,
+
+        4*ballSize, -4*ballSize, // row 5
+        4*ballSize, -2*ballSize,
+        4*ballSize,        0.0f,
+        4*ballSize,  2*ballSize,
+        4*ballSize,  4*ballSize,
+    };
+    float *pt = &poolPts[0];
     for ( i = 0; i < NUM_PARTICLES; i++ )
     {
         float *particleData = &userData->particleData[i * PARTICLE_SIZE];
 
         // Velocities
-        float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
-        normalize2f(&v[0]);
-        (*particleData++) = v[0];
-        (*particleData++) = v[1];
+        //float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
+        //normalize2f(&v[0]);
+        //(*particleData++) = v[0];
+        //(*particleData++) = v[1];
+        (*particleData++) = 0.0f;
+        (*particleData++) = 0.0f;
 
         // Start position of particle
-        (*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
-        (*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
+        //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
+        //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
+        (*particleData++) = (*pt++);
+        (*particleData++) = (*pt++);
     }
 
     userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
@@ -261,31 +290,6 @@ int InitParticles ( ESContext *esContext )
     return TRUE;
 }
 
-int InitShip( ESContext *esContext )
-{
-    // Make the program
-    UserData *userData = esContext->userData;
-    char *vShaderStr = loadShader("shader/ship.vert");
-    char *fShaderStr = loadShader("shader/ship.frag");
-    userData->shipProgram = esLoadProgram ( vShaderStr, fShaderStr );
-    free(vShaderStr);
-    free(fShaderStr);
-
-    // Get the uniform locations
-    userData->shipStartPositionLoc = glGetUniformLocation (
-            userData->shipProgram, "u_startPosition" );
-    userData->shipMVPLoc = glGetUniformLocation( userData->shipProgram,
-            "u_MVP");
-    userData->shipColorLoc = glGetUniformLocation( userData->shipProgram,
-            "u_color" );
-
-    // Get the attribute locations
-    userData->shipPositionLoc = glGetAttribLocation ( userData->shipProgram,
-            "a_position" );
-
-    return TRUE;
-}
-
 int InitQuad( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
@@ -320,15 +324,12 @@ int Init ( ESContext *esContext )
     if ( !InitParticles(esContext) ) {
         return FALSE;
     }
-    if ( !InitShip(esContext) ) {
-        return FALSE;
-    }
-    if ( !InitQuad(esContext) ) {
-        return FALSE;
-    }
-    if ( !InitFBO(esContext) ) {
-        return FALSE;
-    }
+    //if ( !InitQuad(esContext) ) {
+    //    return FALSE;
+    //}
+    //if ( !InitFBO(esContext) ) {
+    //    return FALSE;
+    //}
     glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
 
     userData->time = 0.0f;
@@ -383,57 +384,22 @@ void DrawParticles ( ESContext *esContext )
     glUniformMatrix4fv(userData->particlesMVPLoc, 1, GL_FALSE,
                        &userData->particlesMVP.m[0][0]);
 
-    glBindFramebuffer( GL_FRAMEBUFFER, userData->renderToTexFramebuffer );
-    glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D, userData->renderToTexTexture, 0 );
+    //glBindFramebuffer( GL_FRAMEBUFFER, userData->renderToTexFramebuffer );
+    //glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+    //        GL_TEXTURE_2D, userData->renderToTexTexture, 0 );
     //glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
     //        GL_RENDERBUFFER, userData->renderToTexDepthRenderBuffer );
 
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if ( status == GL_FRAMEBUFFER_COMPLETE ) {
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);        
-        glViewport ( 0, 0, RENDER_TO_TEX_WIDTH, RENDER_TO_TEX_HEIGHT );
-        glDrawArrays( GL_POINTS, 0, NUM_PARTICLES );
-        glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-        glViewport ( 0, 0, esContext->width, esContext->height );
-    }
+    //GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    //if ( status == GL_FRAMEBUFFER_COMPLETE ) {
+    //    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //    glViewport ( 0, 0, RENDER_TO_TEX_WIDTH, RENDER_TO_TEX_HEIGHT );
+    //    glDrawArrays( GL_POINTS, 0, NUM_PARTICLES );
+    //    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+    //    glViewport ( 0, 0, esContext->width, esContext->height );
+    //}
     glDrawArrays( GL_POINTS, 0, NUM_PARTICLES );
-}
-
-void DrawShip ( ESContext *esContext )
-{
-    UserData *userData = esContext->userData;
-
-    glUseProgram( userData->shipProgram );
-
-    glEnableVertexAttribArray ( userData->shipPositionLoc );
-    glVertexAttribPointer ( userData->shipPositionLoc, 2, GL_FLOAT, GL_FALSE,
-                            0, &userData->ship->v[0] );
-    // Start Position.
-    GLfloat v[] = { 0.0f, 0.0f };
-    glUniform2fv( userData->shipStartPositionLoc, 1, &v[0] );
-
-    GLfloat c[] = {1.0f, 1.0f, 1.0f, 1.0f};
-    glUniform4fv( userData->shipColorLoc, 1, &c[0] );
-
-    // Generate a model view matrix to rotate/translate the cube
-    ESMatrix modelview;
-    ESMatrix perspective;
-
-    esMatrixLoadIdentity( &modelview );
-
-    // Translate away from the viewer
-    esTranslate( &modelview, 0.0, 0.0, -2.0 );
-
-    esMatrixLoadIdentity( &perspective );
-    esPerspective(&perspective, 60.0f, (float)esContext->width /
-                  (float)esContext->height, 1.0f, 20.0f);
-    esMatrixMultiply( &userData->shipMVP, &modelview, &perspective );
-    glUniformMatrix4fv(userData->shipMVPLoc, 1, GL_FALSE,
-                       &userData->shipMVP.m[0][0]);
-
-    glDrawArrays( GL_TRIANGLES, 0, userData->ship->numVertices );
 }
 
 void DrawQuad( ESContext *esContext )
@@ -538,7 +504,6 @@ void Draw ( ESContext *esContext )
     DrawParticles( esContext );
     int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
-    DrawShip( esContext );
     //DrawQuad( esContext );
 }
 
