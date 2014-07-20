@@ -23,6 +23,7 @@
 #define PARTICLE_SIZE   4
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
+#define POINT_RADIUS 0.1f
 
 struct Ship
 {
@@ -47,13 +48,14 @@ typedef struct
     // Particles Attribute locations
     GLint  particlesLifetimeLoc;
     GLint  particlesStartPositionLoc;
-    GLint  particlesVelPositionLoc;
+    //GLint  particlesVelPositionLoc;
 
     // Particles Uniform location
     GLint particlesTimeLoc;
     GLint particlesColorLoc;
     GLint particlesCenterPositionLoc;
     GLint particlesSamplerLoc;
+    GLint particlesPointSize;
 
     // Particles Texture handle
     GLuint particlesTextureId;
@@ -192,13 +194,14 @@ int InitParticles ( ESContext *esContext )
     // Get the attribute locations
     userData->particlesLifetimeLoc = glGetAttribLocation ( userData->particlesProgram, "a_lifetime" );
     userData->particlesStartPositionLoc = glGetAttribLocation ( userData->particlesProgram, "a_startPosition" );
-    userData->particlesVelPositionLoc = glGetAttribLocation ( userData->particlesProgram, "a_endPosition" );
+    //userData->particlesVelPositionLoc = glGetAttribLocation ( userData->particlesProgram, "a_endPosition" );
 
     // Get the uniform locations
     userData->particlesTimeLoc = glGetUniformLocation ( userData->particlesProgram, "u_time" );
     userData->particlesCenterPositionLoc = glGetUniformLocation ( userData->particlesProgram, "u_centerPosition" );
     userData->particlesColorLoc = glGetUniformLocation ( userData->particlesProgram, "u_color" );
     userData->particlesSamplerLoc = glGetUniformLocation ( userData->particlesProgram, "s_texture" );
+    userData->particlesPointSize = glGetUniformLocation ( userData->particlesProgram, "u_pointSize" );
     // Fill in particle data array
     srand ( 0 );
     float ballSize = 0.05f;
@@ -230,19 +233,19 @@ int InitParticles ( ESContext *esContext )
     {
         float *particleData = &userData->particleData[i * PARTICLE_SIZE];
 
-        // Velocities
-        //float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
-        //normalize2f(&v[0]);
-        //(*particleData++) = v[0];
-        //(*particleData++) = v[1];
-        (*particleData++) = 0.0f;
-        (*particleData++) = 0.0f;
-
         // Start position of particle
         //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
         //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
         (*particleData++) = (*pt++);
         (*particleData++) = (*pt++);
+
+        // Velocities
+        float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
+        normalize2f(&v[0]);
+        (*particleData++) = v[0];
+        (*particleData++) = v[1];
+        //(*particleData++) = 0.0f;
+        //(*particleData++) = 0.0f;
     }
 
     userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
@@ -286,6 +289,8 @@ int InitParticles ( ESContext *esContext )
     color[3] = 1.0;
 
     glUniform4fv ( userData->particlesColorLoc, 1, &color[0] );
+    // TODO: Make this a function of resolution and remove POINT_RADIUS
+    glUniform1f ( userData->particlesPointSize, 20.0f );
 
     return TRUE;
 }
@@ -336,6 +341,46 @@ int Init ( ESContext *esContext )
     return TRUE;
 }
 
+void CheckForCollisions ( float *particleData )
+{
+    int i;
+    for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
+        int j;
+        float *point1 = &particleData[i * PARTICLE_SIZE];
+        for ( j = i+1 ; j < NUM_PARTICLES ; ++j ) {
+            float *point2 = &particleData[j * PARTICLE_SIZE];
+            float diff1 = point1[0] - point2[0];
+            float diff2 = point1[1] - point2[1];
+
+            if (diff1*diff1 + diff2*diff2 <= 4*POINT_RADIUS*POINT_RADIUS) {
+                printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
+                        point2[0], point2[1]);
+            }
+        }
+    }
+}
+
+void UpdatePositions ( ESContext *esContext, float deltaTime )
+{
+    UserData *userData = esContext->userData;
+    float *particleData = &userData->particleData;
+    //CheckForCollisions( particleData );
+    {
+        int i;
+        for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
+            particleData = &userData->particleData[i * PARTICLE_SIZE];
+
+            particleData[0] += particleData[2] * deltaTime;
+            particleData[0] = particleData[0] > 1.0f ? -1.0f : particleData[0];
+            particleData[0] = particleData[0] < -1.0f ? 1.0f : particleData[0];
+
+            particleData[1] += particleData[3] * deltaTime;
+            particleData[1] = particleData[1] > 1.0f ? -1.0f : particleData[1];
+            particleData[1] = particleData[1] < -1.0f ? 1.0f : particleData[1];
+        }
+    }
+}
+
 ///
 //  Update time-based variables
 //
@@ -348,6 +393,7 @@ void Update ( ESContext *esContext, float deltaTime )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1f ( userData->particlesTimeLoc, userData->time );
+    UpdatePositions( esContext, deltaTime );
 }
 
 void DrawParticles ( ESContext *esContext )
@@ -357,17 +403,17 @@ void DrawParticles ( ESContext *esContext )
     // Use the program object
     glUseProgram ( userData->particlesProgram );
 
-    glVertexAttribPointer ( userData->particlesVelPositionLoc, 2, GL_FLOAT,
-            GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
-            &userData->particleData[0] );
+    //glVertexAttribPointer ( userData->particlesVelPositionLoc, 2, GL_FLOAT,
+    //        GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
+    //        &userData->particleData[0] );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
-            &userData->particleData[2] );
+            &userData->particleData[0] );
 
 
     glEnableVertexAttribArray ( userData->particlesLifetimeLoc );
-    glEnableVertexAttribArray ( userData->particlesVelPositionLoc );
+    //glEnableVertexAttribArray ( userData->particlesVelPositionLoc );
     glEnableVertexAttribArray ( userData->particlesStartPositionLoc );
     // Blend particles
     glEnable ( GL_BLEND );
@@ -502,7 +548,7 @@ void Draw ( ESContext *esContext )
     glClear ( GL_COLOR_BUFFER_BIT );
 
     DrawParticles( esContext );
-    int hasRedPix = ReadPixels( esContext );
+    //int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
     //DrawQuad( esContext );
 }
