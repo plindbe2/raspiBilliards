@@ -32,9 +32,11 @@ all: $(EXENAME)
 clean:
 	-rm *.o $(EXENAME)
 
-$(EXENAME) : billiards.o esShader.o esShapes.o esTransform.o esUtil.o glesTools.o
+$(EXENAME) : billiards.o esShader.o esShapes.o esTransform.o esUtil.o glesTools.o glesVMath.o
 	$(CC) ${CFLAGS} ${DEFINES} $^ -o ./$@ ${LIBS}
 glesTools.o : glesTools.c glesTools.h
+	$(CC) ${CFLAGS} ${DEFINES} -c $< -o ./$@ ${INCDIR} ${LIBS}
+glesVMath.o : glesVMath.c glesVMath.h
 	$(CC) ${CFLAGS} ${DEFINES} -c $< -o ./$@ ${INCDIR} ${LIBS}
 billiards.o : billiards.c esShader.o esShapes.o esTransform.o esUtil.o esUtil.h
 	$(CC) ${CFLAGS} ${DEFINES} -c $< -o ./$@ ${INCDIR} ${LIBS}
