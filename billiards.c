@@ -18,12 +18,13 @@
 #include <math.h>
 #include "esUtil.h"
 #include "glesTools.h"
+#include "glesVMath.h"
 
 #define NUM_PARTICLES	16
 #define PARTICLE_SIZE   4
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
-#define POINT_RADIUS 0.1f
+#define POINT_RADIUS 0.02f
 
 struct Ship
 {
@@ -204,7 +205,7 @@ int InitParticles ( ESContext *esContext )
     userData->particlesPointSize = glGetUniformLocation ( userData->particlesProgram, "u_pointSize" );
     // Fill in particle data array
     srand ( 0 );
-    float ballSize = 0.05f;
+    float ballSize = 0.03f;
     float poolPts [] = {
               -0.5,        0.0f, // white ball
 
@@ -240,12 +241,17 @@ int InitParticles ( ESContext *esContext )
         (*particleData++) = (*pt++);
 
         // Velocities
-        float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
-        normalize2f(&v[0]);
-        (*particleData++) = v[0];
-        (*particleData++) = v[1];
-        //(*particleData++) = 0.0f;
-        //(*particleData++) = 0.0f;
+        //float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
+        //normalize2f(&v[0]);
+        //(*particleData++) = v[0];
+        //(*particleData++) = v[1];
+        if ( i == 0 ) {
+            (*particleData++) = 0.1f;
+            (*particleData++) = 0.0f;
+        } else {
+            (*particleData++) = 0.0f;
+            (*particleData++) = 0.0f;
+        }
     }
 
     userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
@@ -341,7 +347,38 @@ int Init ( ESContext *esContext )
     return TRUE;
 }
 
-void CheckForCollisions ( float *particleData )
+void Collision(GLfloat *pos1, GLfloat *pos2)
+{
+    if (pos1 == pos2) {
+        fprintf(stderr, "Collision Error: pos1 == pos2\n");
+    }
+    GLfloat newVel1[2];
+    GLfloat newVel2[2];
+    GLfloat dir1[2];
+    GLfloat dir2[2];
+    GLfloat tmpVec[2];
+
+    UMinusV(&dir1, &pos2[0], &pos1[0], 2);
+    UMinusV(&dir2, &pos1[0], &pos2[0], 2);
+
+    memcpy(&newVel1, &pos1[2], sizeof(GLfloat) * 2);
+    memcpy(&newVel2, &pos2[2], sizeof(GLfloat) * 2);
+
+    projectUonV2f(&tmpVec, &pos2[2], &dir1);
+    UPlusV(&newVel1, &newVel1, &tmpVec, 2);
+    projectUonV2f(&tmpVec, &pos1[2], &dir2);
+    UMinusV(&newVel1, &newVel1, &tmpVec, 2);
+
+    projectUonV2f(&tmpVec, &pos1[2], &dir1);
+    UPlusV(&newVel2, &newVel2, &tmpVec, 2);
+    projectUonV2f(&tmpVec, &pos2[2], &dir2);
+    UMinusV(&newVel2, &newVel2, &tmpVec, 2);
+
+    memcpy(&pos1[2], &newVel1, sizeof(GLfloat) * 2);
+    memcpy(&pos2[2], &newVel2, sizeof(GLfloat) * 2);
+}
+
+void CheckForCollisions ( GLfloat *particleData )
 {
     int i;
     for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
@@ -353,8 +390,9 @@ void CheckForCollisions ( float *particleData )
             float diff2 = point1[1] - point2[1];
 
             if (diff1*diff1 + diff2*diff2 <= 4*POINT_RADIUS*POINT_RADIUS) {
-                printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
-                        point2[0], point2[1]);
+                //printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
+                //        point2[0], point2[1]);
+                Collision(point1, point2);
             }
         }
     }
@@ -364,19 +402,19 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
 {
     UserData *userData = esContext->userData;
     float *particleData = &userData->particleData;
-    //CheckForCollisions( particleData );
+    CheckForCollisions( particleData );
     {
         int i;
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
             particleData = &userData->particleData[i * PARTICLE_SIZE];
 
             particleData[0] += particleData[2] * deltaTime;
-            particleData[0] = particleData[0] > 1.0f ? -1.0f : particleData[0];
-            particleData[0] = particleData[0] < -1.0f ? 1.0f : particleData[0];
+            //particleData[0] = particleData[0] > 1.0f ? -1.0f : particleData[0];
+            //particleData[0] = particleData[0] < -1.0f ? 1.0f : particleData[0];
 
             particleData[1] += particleData[3] * deltaTime;
-            particleData[1] = particleData[1] > 1.0f ? -1.0f : particleData[1];
-            particleData[1] = particleData[1] < -1.0f ? 1.0f : particleData[1];
+            //particleData[1] = particleData[1] > 1.0f ? -1.0f : particleData[1];
+            //particleData[1] = particleData[1] < -1.0f ? 1.0f : particleData[1];
         }
     }
 }
