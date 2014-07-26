@@ -229,10 +229,10 @@ int InitParticles ( ESContext *esContext )
         4*ballSize,  2*ballSize,
         4*ballSize,  4*ballSize,
     };
-    float *pt = &poolPts[0];
+    GLfloat *pt = &poolPts[0];
     for ( i = 0; i < NUM_PARTICLES; i++ )
     {
-        float *particleData = &userData->particleData[i * PARTICLE_SIZE];
+        GLfloat *particleData = &userData->particleData[i * PARTICLE_SIZE];
 
         // Start position of particle
         //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
@@ -246,7 +246,7 @@ int InitParticles ( ESContext *esContext )
         //(*particleData++) = v[0];
         //(*particleData++) = v[1];
         if ( i == 0 ) {
-            (*particleData++) = 0.1f;
+            (*particleData++) = 0.2f;
             (*particleData++) = 0.0f;
         } else {
             (*particleData++) = 0.0f;
@@ -347,10 +347,66 @@ int Init ( ESContext *esContext )
     return TRUE;
 }
 
+void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
+{
+    if ( pos1 == pos2 ) {
+        fprintf(stderr, "RewindToImpact Error: pos1 == pos2\n");
+        return;
+    }
+
+    GLfloat tmpPos1[2];
+    GLfloat tmpPos2[2];
+
+    GLfloat tmpVec[2];
+
+    GLfloat initialDiff;
+    GLfloat impactDistanceSquared = 4*POINT_RADIUS*POINT_RADIUS;
+    distanceSquared(&initialDiff, &pos1[0], &pos2[0], 2);
+
+    // Copy positions from points to tmpPos.
+    memcpy(&tmpPos1[0], &pos1[0], sizeof(GLfloat) * 2);
+    memcpy(&tmpPos2[0], &pos2[0], sizeof(GLfloat) * 2);
+
+    GLfloat initialRewindFactor = 0.001f; // arbitrary small step.
+
+    // Take the first small step.
+    scale(&tmpVec[0], &pos1[2], initialRewindFactor, 2);
+    UMinusV(&tmpPos1[0], &pos1[0], &tmpVec[0], 2);
+    scale(&tmpVec[0], &pos2[2], initialRewindFactor, 2);
+    UMinusV(&tmpPos2[0], &pos2[0], &tmpVec[0], 2);
+
+    GLfloat secondDiff;
+    distanceSquared(&secondDiff, &tmpPos1[0], &tmpPos2[0], 2);
+    //printf("initial diff:          %f\n", initialDiff / impactDistanceSquared);
+    //printf("second diff :          %f\n", secondDiff / impactDistanceSquared);
+    //printf("impactDistanceSquared: %f\n", impactDistanceSquared);
+    //printf("stepPercent:           %f\n", (secondDiff - initialDiff) / impactDistanceSquared);
+    //printf("%f\n\n", (1.0f - (secondDiff / impactDistanceSquared)) / ((secondDiff - initialDiff) / impactDistanceSquared));
+
+    // Calculate how many more steps to take.
+    GLfloat numSteps = (1.0f - (secondDiff / impactDistanceSquared)) /
+            ((secondDiff - initialDiff) / impactDistanceSquared);
+
+    numSteps += 400.0f; // TODO: bad bad fudge factor
+
+    scale(&tmpVec[0], &pos1[2], numSteps * (fabs(secondDiff - initialDiff)),
+            2);
+    UMinusV(&tmpPos1[0], &pos1[0], &tmpVec[0], 2);
+    scale(&tmpVec[0], &pos2[2], numSteps * (fabs(secondDiff - initialDiff)),
+            2);
+    UMinusV(&tmpPos2[0], &pos2[0], &tmpVec[0], 2);
+
+    //printf("Moving (%f, %f) to (%f, %f)\n", pos1[0], pos1[1], tmpPos1[0], tmpPos1[1]);
+    //printf("Moving (%f, %f) to (%f, %f)\n\n", pos2[0], pos2[1], tmpPos2[0], tmpPos2[1]);
+    memcpy(&pos1[0], &tmpPos1[0], sizeof(GLfloat) * 2);
+    memcpy(&pos2[0], &tmpPos2[0], sizeof(GLfloat) * 2);
+}
+
 void Collision(GLfloat *pos1, GLfloat *pos2)
 {
     if (pos1 == pos2) {
         fprintf(stderr, "Collision Error: pos1 == pos2\n");
+        return;
     }
     GLfloat newVel1[2];
     GLfloat newVel2[2];
@@ -358,24 +414,24 @@ void Collision(GLfloat *pos1, GLfloat *pos2)
     GLfloat dir2[2];
     GLfloat tmpVec[2];
 
-    UMinusV(&dir1, &pos2[0], &pos1[0], 2);
-    UMinusV(&dir2, &pos1[0], &pos2[0], 2);
+    UMinusV(&dir1[0], &pos2[0], &pos1[0], 2);
+    UMinusV(&dir2[0], &pos1[0], &pos2[0], 2);
 
-    memcpy(&newVel1, &pos1[2], sizeof(GLfloat) * 2);
-    memcpy(&newVel2, &pos2[2], sizeof(GLfloat) * 2);
+    memcpy(&newVel1[0], &pos1[2], sizeof(GLfloat) * 2);
+    memcpy(&newVel2[0], &pos2[2], sizeof(GLfloat) * 2);
 
-    projectUonV2f(&tmpVec, &pos2[2], &dir1);
-    UPlusV(&newVel1, &newVel1, &tmpVec, 2);
-    projectUonV2f(&tmpVec, &pos1[2], &dir2);
-    UMinusV(&newVel1, &newVel1, &tmpVec, 2);
+    projectUonV2f(&tmpVec[0], &pos2[2], &dir1[0]);
+    UPlusV(&newVel1[0], &newVel1[0], &tmpVec[0], 2);
+    projectUonV2f(&tmpVec[0], &pos1[2], &dir2[0]);
+    UMinusV(&newVel1[0], &newVel1[0], &tmpVec[0], 2);
 
-    projectUonV2f(&tmpVec, &pos1[2], &dir1);
-    UPlusV(&newVel2, &newVel2, &tmpVec, 2);
-    projectUonV2f(&tmpVec, &pos2[2], &dir2);
-    UMinusV(&newVel2, &newVel2, &tmpVec, 2);
+    projectUonV2f(&tmpVec[0], &pos1[2], &dir1[0]);
+    UPlusV(&newVel2[0], &newVel2[0], &tmpVec[0], 2);
+    projectUonV2f(&tmpVec[0], &pos2[2], &dir2[0]);
+    UMinusV(&newVel2[0], &newVel2[0], &tmpVec[0], 2);
 
-    memcpy(&pos1[2], &newVel1, sizeof(GLfloat) * 2);
-    memcpy(&pos2[2], &newVel2, sizeof(GLfloat) * 2);
+    memcpy(&pos1[2], &newVel1[0], sizeof(GLfloat) * 2);
+    memcpy(&pos2[2], &newVel2[0], sizeof(GLfloat) * 2);
 }
 
 void CheckForCollisions ( GLfloat *particleData )
@@ -383,15 +439,16 @@ void CheckForCollisions ( GLfloat *particleData )
     int i;
     for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         int j;
-        float *point1 = &particleData[i * PARTICLE_SIZE];
+        GLfloat *point1 = &particleData[i * PARTICLE_SIZE];
         for ( j = i+1 ; j < NUM_PARTICLES ; ++j ) {
-            float *point2 = &particleData[j * PARTICLE_SIZE];
-            float diff1 = point1[0] - point2[0];
-            float diff2 = point1[1] - point2[1];
+            GLfloat *point2 = &particleData[j * PARTICLE_SIZE];
+            GLfloat diff1 = point1[0] - point2[0];
+            GLfloat diff2 = point1[1] - point2[1];
 
             if (diff1*diff1 + diff2*diff2 <= 4*POINT_RADIUS*POINT_RADIUS) {
                 //printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
                 //        point2[0], point2[1]);
+                RewindToImpact(point1, point2);
                 Collision(point1, point2);
             }
         }
@@ -401,7 +458,7 @@ void CheckForCollisions ( GLfloat *particleData )
 void UpdatePositions ( ESContext *esContext, float deltaTime )
 {
     UserData *userData = esContext->userData;
-    float *particleData = &userData->particleData;
+    GLfloat *particleData = &userData->particleData[0];
     CheckForCollisions( particleData );
     {
         int i;
@@ -577,7 +634,7 @@ int ReadPixels( ESContext *esContext )
 //
 void Draw ( ESContext *esContext )
 {
-    UserData *userData = esContext->userData;
+    //UserData *userData = esContext->userData;
 
     // Set the viewport for Particles
     glViewport ( 0, 0, esContext->width, esContext->height );
