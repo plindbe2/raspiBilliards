@@ -25,6 +25,7 @@
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
 #define POINT_RADIUS 0.02f
+#define POINT_ACCELERATION -0.2f
 
 struct Ship
 {
@@ -466,12 +467,11 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
             particleData = &userData->particleData[i * PARTICLE_SIZE];
 
             particleData[0] += particleData[2] * deltaTime;
-            //particleData[0] = particleData[0] > 1.0f ? -1.0f : particleData[0];
-            //particleData[0] = particleData[0] < -1.0f ? 1.0f : particleData[0];
-
             particleData[1] += particleData[3] * deltaTime;
-            //particleData[1] = particleData[1] > 1.0f ? -1.0f : particleData[1];
-            //particleData[1] = particleData[1] < -1.0f ? 1.0f : particleData[1];
+
+            GLfloat tmpAccelVec[2];
+            scale(&tmpAccelVec[0], &particleData[2], POINT_ACCELERATION * deltaTime, 2);
+            UPlusV(&particleData[2], &particleData[2], &tmpAccelVec[0], 2);
         }
     }
 }
