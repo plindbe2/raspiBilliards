@@ -247,7 +247,7 @@ int InitParticles ( ESContext *esContext )
         //(*particleData++) = v[0];
         //(*particleData++) = v[1];
         if ( i == 0 ) {
-            (*particleData++) = 0.2f;
+            (*particleData++) = 1.0f;
             (*particleData++) = 0.0f;
         } else {
             (*particleData++) = 0.0f;
@@ -378,17 +378,12 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
 
     GLfloat secondDiff;
     distanceSquared(&secondDiff, &tmpPos1[0], &tmpPos2[0], 2);
-    //printf("initial diff:          %f\n", initialDiff / impactDistanceSquared);
-    //printf("second diff :          %f\n", secondDiff / impactDistanceSquared);
-    //printf("impactDistanceSquared: %f\n", impactDistanceSquared);
-    //printf("stepPercent:           %f\n", (secondDiff - initialDiff) / impactDistanceSquared);
-    //printf("%f\n\n", (1.0f - (secondDiff / impactDistanceSquared)) / ((secondDiff - initialDiff) / impactDistanceSquared));
 
     // Calculate how many more steps to take.
     GLfloat numSteps = (1.0f - (secondDiff / impactDistanceSquared)) /
             ((secondDiff - initialDiff) / impactDistanceSquared);
 
-    numSteps += 400.0f; // TODO: bad bad fudge factor
+    numSteps += 350.0f; // TODO: bad bad fudge factor
 
     scale(&tmpVec[0], &pos1[2], numSteps * (fabs(secondDiff - initialDiff)),
             2);
