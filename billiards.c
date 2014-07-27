@@ -48,9 +48,7 @@ typedef struct
     GLuint particlesProgram;
 
     // Particles Attribute locations
-    GLint  particlesLifetimeLoc;
     GLint  particlesStartPositionLoc;
-    //GLint  particlesVelPositionLoc;
 
     // Particles Uniform location
     GLint particlesTimeLoc;
@@ -71,25 +69,6 @@ typedef struct
     // Particles perspective matrix
     ESMatrix particlesMVP;
     GLint particlesMVPLoc;
-
-    // =============Ship============= //
-
-    // Ship Handle to a program object
-    GLint shipProgram;
-
-    // Ship Attribute locations
-    GLint shipPositionLoc;
-
-    // Ship Unifrom location
-    GLint shipStartPositionLoc;
-    GLint shipColorLoc;
-
-    // Ship perspective matrix
-    ESMatrix shipMVP;
-    GLint shipMVPLoc;
-
-    // Ship struct
-    struct Ship * ship;
 
     // =========renderToTex========= //
 
@@ -194,9 +173,7 @@ int InitParticles ( ESContext *esContext )
     free(fShaderStr);
 
     // Get the attribute locations
-    userData->particlesLifetimeLoc = glGetAttribLocation ( userData->particlesProgram, "a_lifetime" );
     userData->particlesStartPositionLoc = glGetAttribLocation ( userData->particlesProgram, "a_startPosition" );
-    //userData->particlesVelPositionLoc = glGetAttribLocation ( userData->particlesProgram, "a_endPosition" );
 
     // Get the uniform locations
     userData->particlesTimeLoc = glGetUniformLocation ( userData->particlesProgram, "u_time" );
@@ -493,17 +470,11 @@ void DrawParticles ( ESContext *esContext )
     // Use the program object
     glUseProgram ( userData->particlesProgram );
 
-    //glVertexAttribPointer ( userData->particlesVelPositionLoc, 2, GL_FLOAT,
-    //        GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
-    //        &userData->particleData[0] );
-
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
             &userData->particleData[0] );
 
 
-    glEnableVertexAttribArray ( userData->particlesLifetimeLoc );
-    //glEnableVertexAttribArray ( userData->particlesVelPositionLoc );
     glEnableVertexAttribArray ( userData->particlesStartPositionLoc );
     // Blend particles
     glEnable ( GL_BLEND );
@@ -662,17 +633,6 @@ int main ( int argc, char *argv[] )
 {
     ESContext esContext;
     UserData  userData;
-
-    // Setup the Ship struct
-    struct Ship ship;
-    ship.numVertices = 2 * 3;
-    GLfloat vShip[] = {
-        -0.025f, -0.025f,
-         0.025f, -0.025f,
-           0.0f,  0.05f
-    };
-    ship.v = &vShip;
-    userData.ship = &ship;
 
     // Setup the Quad struct
     struct Quad quad;
