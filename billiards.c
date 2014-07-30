@@ -27,6 +27,8 @@
 #define POINT_RADIUS 0.02f
 #define POINT_ACCELERATION -0.2f
 
+#define TABLE_SIDE_LENGTH 0.75f
+
 struct Ship
 {
     GLint numVertices;
@@ -38,6 +40,13 @@ struct Quad
     GLint elementsSize;
     GLfloat *v;
     GLshort *e;
+};
+
+struct Table
+{
+    GLint elementsSize;
+    GLfloat *v;
+    GLushort *e;
 };
 
 typedef struct
@@ -56,6 +65,7 @@ typedef struct
     GLint particlesCenterPositionLoc;
     GLint particlesSamplerLoc;
     GLint particlesPointSize;
+    GLint particlesUseTexture;
 
     // Particles Texture handle
     GLuint particlesTextureId;
@@ -95,6 +105,9 @@ typedef struct
 
     // Quad struct
     struct Quad * quad;
+
+    // ============Table============ //
+    struct Table * table;
 
 } UserData;
 
@@ -181,6 +194,7 @@ int InitParticles ( ESContext *esContext )
     userData->particlesColorLoc = glGetUniformLocation ( userData->particlesProgram, "u_color" );
     userData->particlesSamplerLoc = glGetUniformLocation ( userData->particlesProgram, "s_texture" );
     userData->particlesPointSize = glGetUniformLocation ( userData->particlesProgram, "u_pointSize" );
+    userData->particlesUseTexture = glGetUniformLocation ( userData->particlesProgram, "u_useTexture" );
     // Fill in particle data array
     srand ( 0 );
     float ballSize = 0.03f;
@@ -304,6 +318,11 @@ int InitQuad( ESContext *esContext )
     return TRUE;
 }
 
+int InitTable( ESContext *esContext )
+{
+    return TRUE;
+}
+
 ///
 // Initialize the shader and program object
 //
@@ -311,6 +330,9 @@ int Init ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
     if ( !InitParticles(esContext) ) {
+        return FALSE;
+    }
+    if ( !InitTable(esContext) ) {
         return FALSE;
     }
     //if ( !InitQuad(esContext) ) {
@@ -469,6 +491,8 @@ void DrawParticles ( ESContext *esContext )
 
     // Use the program object
     glUseProgram ( userData->particlesProgram );
+    // This changes when we call DrawTable.
+    glUniform1i ( userData->particlesUseTexture, 1 );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
@@ -535,6 +559,19 @@ void DrawQuad( ESContext *esContext )
     //glDrawArrays( GL_TRIANGLES, 0, userData->quad->numVertices );
     glDrawElements ( GL_TRIANGLES, userData->quad->elementsSize,
             GL_UNSIGNED_SHORT, &userData->quad->e[0] );
+}
+
+void DrawTable( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    glUseProgram ( userData->particlesProgram );
+    glUniform1i ( userData->particlesUseTexture, 0 );
+
+    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+            GL_FALSE, 0, &userData->table->v[0] );
+    glDrawElements ( GL_LINES, userData->table->elementsSize,
+            GL_UNSIGNED_SHORT, &userData->table->e[0] );
 }
 
 int ReadPixels( ESContext *esContext )
@@ -609,6 +646,7 @@ void Draw ( ESContext *esContext )
     glClear ( GL_COLOR_BUFFER_BIT );
 
     DrawParticles( esContext );
+    DrawTable( esContext );
     //int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
     //DrawQuad( esContext );
@@ -638,17 +676,17 @@ int main ( int argc, char *argv[] )
     struct Quad quad;
     quad.elementsSize = 6;
     GLfloat vQuad[] = {
-         -1.0f, -1.0f,
-          0.0f,  0.0f,
+        -1.0f, -1.0f,
+         0.0f,  0.0f,
 
-          1.0f, -1.0f,
-          1.0f,  0.0f,
+         1.0f, -1.0f,
+         1.0f,  0.0f,
 
-          1.0f,  1.0f,
-          1.0f,  1.0f,
+         1.0f,  1.0f,
+         1.0f,  1.0f,
 
-         -1.0f,  1.0f,
-          0.0f,  1.0f,
+        -1.0f,  1.0f,
+         0.0f,  1.0f,
     };
     quad.v = &vQuad;
 
@@ -658,6 +696,25 @@ int main ( int argc, char *argv[] )
     quad.e = &eQuad;
 
     userData.quad = &quad;
+
+    struct Table table;
+    table.elementsSize = 8;
+    GLfloat vTable[] = {
+        -2*TABLE_SIDE_LENGTH, -TABLE_SIDE_LENGTH,
+         2*TABLE_SIDE_LENGTH, -TABLE_SIDE_LENGTH,
+         2*TABLE_SIDE_LENGTH,  TABLE_SIDE_LENGTH,
+        -2*TABLE_SIDE_LENGTH,  TABLE_SIDE_LENGTH,
+    };
+    table.v = &vTable;
+
+    GLushort eTable[] = {
+        0, 1,
+        1, 2,
+        2, 3,
+        3, 0,
+    };
+    table.e = &eTable;
+    userData.table = &table;
 
     // Setup renderToTexTexWidth/Height
     userData.renderToTexTexWidth = RENDER_TO_TEX_WIDTH;
