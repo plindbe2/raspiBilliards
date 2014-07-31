@@ -397,7 +397,7 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
     memcpy(&pos2[0], &tmpPos2[0], sizeof(GLfloat) * 2);
 }
 
-void Collision(GLfloat *pos1, GLfloat *pos2)
+void ParticleCollision(GLfloat *pos1, GLfloat *pos2)
 {
     if (pos1 == pos2) {
         fprintf(stderr, "Collision Error: pos1 == pos2\n");
@@ -429,7 +429,7 @@ void Collision(GLfloat *pos1, GLfloat *pos2)
     memcpy(&pos2[2], &newVel2[0], sizeof(GLfloat) * 2);
 }
 
-void CheckForCollisions ( GLfloat *particleData )
+void CheckForParticleCollisions ( GLfloat *particleData )
 {
     int i;
     for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
@@ -444,8 +444,32 @@ void CheckForCollisions ( GLfloat *particleData )
                 //printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
                 //        point2[0], point2[1]);
                 RewindToImpact(point1, point2);
-                Collision(point1, point2);
+                ParticleCollision(point1, point2);
             }
+        }
+    }
+}
+
+void CheckForBoundaryCollisions( GLfloat *particleData, const GLfloat
+        *boundaryPoints )
+{
+    // boundaryPoints is counter-clockwise starting at the lower left
+    int i;
+    for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
+        GLfloat *point = &particleData[i * PARTICLE_SIZE];
+        if( point[0] < boundaryPoints[0 * 2] ) {
+            GLfloat normal[] = {  1.0f, 0.0f };
+            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
+        } else if ( point[0] > boundaryPoints[1 * 2] ) {
+            GLfloat normal[] = { -1.0f, 0.0f };
+            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
+        }
+        if ( point[1] < boundaryPoints[0 * 2 + 1] ) {
+            GLfloat normal[] = {  0.0f, 1.0f };
+            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
+        } else if ( point[1] > boundaryPoints[3 * 2 + 1] ) {
+            GLfloat normal[] = {  0.0f, -1.0f };
+            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
         }
     }
 }
@@ -454,7 +478,8 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
 {
     UserData *userData = esContext->userData;
     GLfloat *particleData = &userData->particleData[0];
-    CheckForCollisions( particleData );
+    CheckForParticleCollisions( particleData );
+    CheckForBoundaryCollisions( particleData, &userData->table->v[0] );
     {
         int i;
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
