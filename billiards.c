@@ -29,6 +29,8 @@
 
 #define TABLE_SIDE_LENGTH 0.75f
 
+#define BALL_SIZE 0.03f
+
 struct Ship
 {
     GLint numVertices;
@@ -197,29 +199,28 @@ int InitParticles ( ESContext *esContext )
     userData->particlesUseTexture = glGetUniformLocation ( userData->particlesProgram, "u_useTexture" );
     // Fill in particle data array
     srand ( 0 );
-    float ballSize = 0.03f;
     float poolPts [] = {
               -0.5,        0.0f, // white ball
 
               0.0f,        0.0f, // row 1
 
-          ballSize,   -ballSize, // row 2
-          ballSize,    ballSize,
+          BALL_SIZE, -BALL_SIZE, // row 2
+          BALL_SIZE,  BALL_SIZE,
 
-        2*ballSize, -2*ballSize, // row 3
-        2*ballSize,        0.0f,
-        2*ballSize,  2*ballSize,
+        2*BALL_SIZE, -2*BALL_SIZE, // row 3
+        2*BALL_SIZE,         0.0f,
+        2*BALL_SIZE,  2*BALL_SIZE,
 
-        3*ballSize, -3*ballSize, // row 4
-        3*ballSize,   -ballSize,
-        3*ballSize,    ballSize,
-        3*ballSize,  3*ballSize,
+        3*BALL_SIZE, -3*BALL_SIZE, // row 4
+        3*BALL_SIZE,   -BALL_SIZE,
+        3*BALL_SIZE,    BALL_SIZE,
+        3*BALL_SIZE,  3*BALL_SIZE,
 
-        4*ballSize, -4*ballSize, // row 5
-        4*ballSize, -2*ballSize,
-        4*ballSize,        0.0f,
-        4*ballSize,  2*ballSize,
-        4*ballSize,  4*ballSize,
+        4*BALL_SIZE, -4*BALL_SIZE, // row 5
+        4*BALL_SIZE, -2*BALL_SIZE,
+        4*BALL_SIZE,         0.0f,
+        4*BALL_SIZE,  2*BALL_SIZE,
+        4*BALL_SIZE,  4*BALL_SIZE,
     };
     GLfloat *pt = &poolPts[0];
     for ( i = 0; i < NUM_PARTICLES; i++ )
@@ -457,17 +458,17 @@ void CheckForBoundaryCollisions( GLfloat *particleData, const GLfloat
     int i;
     for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         GLfloat *point = &particleData[i * PARTICLE_SIZE];
-        if( point[0] < boundaryPoints[0 * 2] ) {
+        if( point[0] - BALL_SIZE < boundaryPoints[0 * 2] ) {
             GLfloat normal[] = {  1.0f, 0.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        } else if ( point[0] > boundaryPoints[1 * 2] ) {
+        } else if ( point[0] + BALL_SIZE > boundaryPoints[1 * 2] ) {
             GLfloat normal[] = { -1.0f, 0.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
         }
-        if ( point[1] < boundaryPoints[0 * 2 + 1] ) {
+        if ( point[1] - BALL_SIZE < boundaryPoints[0 * 2 + 1] ) {
             GLfloat normal[] = {  0.0f, 1.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        } else if ( point[1] > boundaryPoints[3 * 2 + 1] ) {
+        } else if ( point[1] + BALL_SIZE > boundaryPoints[3 * 2 + 1] ) {
             GLfloat normal[] = {  0.0f, -1.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
         }
