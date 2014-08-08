@@ -31,6 +31,10 @@
 
 #define BALL_SIZE 0.03f
 
+#define TABLE_MODEL "model/table.obj"
+#define RAILS_MODEL "model/rails.obj"
+#define HOLES_MODEL "model/holes.obj"
+
 struct Ship
 {
     GLint numVertices;
@@ -46,9 +50,21 @@ struct Quad
 
 struct Table
 {
-    GLint elementsSize;
-    GLfloat *v;
-    GLushort *e;
+    GLint tableElementsSize;
+    GLint railsElementsSize;
+    GLint holesElementsSize;
+
+    GLfloat *vTable;
+    GLfloat *vRails;
+    GLfloat *vHoles;
+
+    GLushort *eTable;
+    GLushort *eRails;
+    GLushort *eHoles;
+
+    GLfloat *nTable;
+    GLfloat *nRails;
+    GLfloat *nHoles;
 };
 
 typedef struct
@@ -321,6 +337,48 @@ int InitQuad( ESContext *esContext )
 
 int InitTable( ESContext *esContext )
 {
+    UserData *userData = esContext->userData;
+
+    GLuint *sizes = loadObj(TABLE_MODEL, &userData->table->vTable,
+            &userData->table->eTable, &userData->table->nTable);
+    userData->table->tableElementsSize = sizes[1];
+    free(sizes);
+    return TRUE;
+}
+
+int InitRails( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    GLuint *sizes = loadObj(RAILS_MODEL, &userData->table->vRails,
+            &userData->table->eRails, &userData->table->nRails);
+    userData->table->railsElementsSize = sizes[1];
+    free(sizes);
+    return TRUE;
+}
+
+int InitHoles( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    GLuint *sizes = loadObj(HOLES_MODEL, &userData->table->vHoles,
+            &userData->table->eHoles, &userData->table->nHoles);
+    userData->table->holesElementsSize = sizes[1];
+    free(sizes);
+    return TRUE;
+}
+
+int InitBilliardsTable( ESContext *esContext )
+{
+    if ( !InitTable(esContext) ) {
+        return FALSE;
+    }
+    if ( !InitRails(esContext) ) {
+        return FALSE;
+    }
+    if ( !InitHoles(esContext) ) {
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -333,7 +391,7 @@ int Init ( ESContext *esContext )
     if ( !InitParticles(esContext) ) {
         return FALSE;
     }
-    if ( !InitTable(esContext) ) {
+    if ( !InitBilliardsTable(esContext) ) {
         return FALSE;
     }
     //if ( !InitQuad(esContext) ) {
@@ -480,7 +538,7 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
     UserData *userData = esContext->userData;
     GLfloat *particleData = &userData->particleData[0];
     CheckForParticleCollisions( particleData );
-    CheckForBoundaryCollisions( particleData, &userData->table->v[0] );
+    //CheckForBoundaryCollisions( particleData, &userData->table->v[0] );
     {
         int i;
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
@@ -593,11 +651,57 @@ void DrawTable( ESContext *esContext )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
+    //GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
+    //glUniform4fv ( userData->particlesColorLoc, 1, &color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
-            GL_FALSE, 0, &userData->table->v[0] );
-    glDrawElements ( GL_LINES, userData->table->elementsSize,
-            GL_UNSIGNED_SHORT, &userData->table->e[0] );
+            GL_FALSE, 0, &userData->table->vTable[0] );
+    glDrawElements ( GL_TRIANGLES, userData->table->tableElementsSize,
+            GL_UNSIGNED_SHORT, &userData->table->eTable[0] );
+}
+
+void DrawRails( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    glUseProgram ( userData->particlesProgram );
+    glUniform1i ( userData->particlesUseTexture, 0 );
+    //GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
+    //glUniform4fv ( userData->particlesColorLoc, 1, &color );
+
+    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+            GL_FALSE, 0, &userData->table->vRails[0] );
+    glDrawElements ( GL_TRIANGLES, userData->table->railsElementsSize,
+            GL_UNSIGNED_SHORT, &userData->table->eRails[0] );
+}
+
+void DrawHoles( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    glUseProgram ( userData->particlesProgram );
+    glUniform1i ( userData->particlesUseTexture, 0 );
+    //GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
+    //glUniform4fv ( userData->particlesColorLoc, 1, &color );
+
+    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+            GL_FALSE, 0, &userData->table->vHoles[0] );
+    glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
+            GL_UNSIGNED_SHORT, &userData->table->eHoles[0] );
+}
+
+void DrawBilliardsTable( ESContext *esContext )
+{
+    DrawTable(esContext);
+    //UserData *userData = esContext->userData;
+
+    //glUseProgram ( userData->particlesProgram );
+    //glUniform1i ( userData->particlesUseTexture, 0 );
+
+    //glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+    //        GL_FALSE, 0, &userData->table->v[0] );
+    //glDrawElements ( GL_TRIANGLES, userData->table->elementsSize,
+    //        GL_UNSIGNED_SHORT, &userData->table->e[0] );
 }
 
 int ReadPixels( ESContext *esContext )
@@ -672,7 +776,7 @@ void Draw ( ESContext *esContext )
     glClear ( GL_COLOR_BUFFER_BIT );
 
     DrawParticles( esContext );
-    DrawTable( esContext );
+    DrawBilliardsTable( esContext );
     //int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
     //DrawQuad( esContext );
@@ -681,6 +785,23 @@ void Draw ( ESContext *esContext )
 ///
 // Cleanup
 //
+void FreeTable( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    free(userData->table->vTable);
+    free(userData->table->vRails);
+    free(userData->table->vHoles);
+
+    free(userData->table->eTable);
+    free(userData->table->eRails);
+    free(userData->table->eHoles);
+
+    free(userData->table->nTable);
+    free(userData->table->nRails);
+    free(userData->table->nHoles);
+}
+
 void ShutDown ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
@@ -691,6 +812,7 @@ void ShutDown ( ESContext *esContext )
 
     // Delete program object
     glDeleteProgram ( userData->particlesProgram );
+    FreeTable( esContext );
 }
 
 int main ( int argc, char *argv[] )
@@ -724,6 +846,10 @@ int main ( int argc, char *argv[] )
     userData.quad = &quad;
 
     struct Table table;
+    //GLuint *sizes = loadObj("model/table.obj", &table.v, &table.e, &table.n);
+    //table.elementsSize = sizes[1];
+    //free(sizes);
+    /*
     table.elementsSize = 8;
     GLfloat vTable[] = {
         -2*TABLE_SIDE_LENGTH, -TABLE_SIDE_LENGTH,
@@ -740,6 +866,7 @@ int main ( int argc, char *argv[] )
         3, 0,
     };
     table.e = &eTable;
+    */
     userData.table = &table;
 
     // Setup renderToTexTexWidth/Height
