@@ -94,6 +94,9 @@ typedef struct
     // Current time
     float time;
 
+    // Particles color
+    float particlesColor[4];
+
     // Particles perspective matrix
     ESMatrix particlesMVP;
     GLint particlesMVPLoc;
@@ -302,6 +305,7 @@ int InitParticles ( ESContext *esContext )
     color[1] = ( (float)(rand() % 10000) / 20000.0f ) + 0.5f;
     color[2] = ( (float)(rand() % 10000) / 20000.0f ) + 0.5f;
     color[3] = 1.0;
+    memcpy(&userData->particlesColor[0], &color[0], sizeof(float) * 4);
 
     glUniform4fv ( userData->particlesColorLoc, 1, &color[0] );
     // TODO: Make this a function of resolution and remove POINT_RADIUS
@@ -614,6 +618,7 @@ void DrawParticles ( ESContext *esContext )
     //    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
     //    glViewport ( 0, 0, esContext->width, esContext->height );
     //}
+    glUniform4fv ( userData->particlesColorLoc, 1, &userData->particlesColor[0] );
     glDrawArrays( GL_POINTS, 0, NUM_PARTICLES );
 }
 
@@ -651,8 +656,8 @@ void DrawTable( ESContext *esContext )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
-    //GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    //glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
+    glUniform4fv ( userData->particlesColorLoc, 1, &color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTable[0] );
@@ -666,8 +671,8 @@ void DrawRails( ESContext *esContext )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
-    //GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    //glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
+    glUniform4fv ( userData->particlesColorLoc, 1, &color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vRails[0] );
@@ -681,11 +686,12 @@ void DrawHoles( ESContext *esContext )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
-    //GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    //glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
+    glUniform4fv ( userData->particlesColorLoc, 1, &color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
+    glDisable ( GL_BLEND );
     glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eHoles[0] );
 }
@@ -693,6 +699,8 @@ void DrawHoles( ESContext *esContext )
 void DrawBilliardsTable( ESContext *esContext )
 {
     DrawTable(esContext);
+    DrawRails(esContext);
+    DrawHoles(esContext);
     //UserData *userData = esContext->userData;
 
     //glUseProgram ( userData->particlesProgram );
