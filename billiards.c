@@ -35,6 +35,8 @@
 #define RAILS_MODEL "model/rails.obj"
 #define HOLES_MODEL "model/holes.obj"
 
+#define RAILS_INNER_HEIGHT 0.74189f
+
 struct Ship
 {
     GLint numVertices;
@@ -513,24 +515,23 @@ void CheckForParticleCollisions ( GLfloat *particleData )
     }
 }
 
-void CheckForBoundaryCollisions( GLfloat *particleData, const GLfloat
-        *boundaryPoints )
+void CheckForBoundaryCollisions( GLfloat *particleData )
 {
     // boundaryPoints is counter-clockwise starting at the lower left
     int i;
     for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         GLfloat *point = &particleData[i * PARTICLE_SIZE];
-        if( point[0] - BALL_SIZE < boundaryPoints[0 * 2] ) {
+        if( point[0] - BALL_SIZE < -2*RAILS_INNER_HEIGHT ) {
             GLfloat normal[] = {  1.0f, 0.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        } else if ( point[0] + BALL_SIZE > boundaryPoints[1 * 2] ) {
+        } else if ( point[0] + BALL_SIZE > 2*RAILS_INNER_HEIGHT ) {
             GLfloat normal[] = { -1.0f, 0.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
         }
-        if ( point[1] - BALL_SIZE < boundaryPoints[0 * 2 + 1] ) {
+        if ( point[1] - BALL_SIZE < -RAILS_INNER_HEIGHT ) {
             GLfloat normal[] = {  0.0f, 1.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        } else if ( point[1] + BALL_SIZE > boundaryPoints[3 * 2 + 1] ) {
+        } else if ( point[1] + BALL_SIZE > RAILS_INNER_HEIGHT ) {
             GLfloat normal[] = {  0.0f, -1.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
         }
@@ -542,7 +543,7 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
     UserData *userData = esContext->userData;
     GLfloat *particleData = &userData->particleData[0];
     CheckForParticleCollisions( particleData );
-    //CheckForBoundaryCollisions( particleData, &userData->table->v[0] );
+    CheckForBoundaryCollisions( particleData );
     {
         int i;
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
