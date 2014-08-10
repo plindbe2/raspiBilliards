@@ -34,6 +34,7 @@
 #define TABLE_MODEL "model/table.obj"
 #define RAILS_MODEL "model/rails.obj"
 #define HOLES_MODEL "model/holes.obj"
+#define TICKS_MODEL "model/ticks.obj"
 
 #define RAILS_INNER_HEIGHT 0.74189f
 
@@ -55,18 +56,22 @@ struct Table
     GLint tableElementsSize;
     GLint railsElementsSize;
     GLint holesElementsSize;
+    GLint ticksElementsSize;
 
     GLfloat *vTable;
     GLfloat *vRails;
     GLfloat *vHoles;
+    GLfloat *vTicks;
 
     GLushort *eTable;
     GLushort *eRails;
     GLushort *eHoles;
+    GLushort *eTicks;
 
     GLfloat *nTable;
     GLfloat *nRails;
     GLfloat *nHoles;
+    GLfloat *nTicks;
 };
 
 typedef struct
@@ -374,6 +379,17 @@ int InitHoles( ESContext *esContext )
     return TRUE;
 }
 
+int InitTicks( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    GLuint *sizes = loadObj(TICKS_MODEL, &userData->table->vTicks,
+            &userData->table->eTicks, &userData->table->nTicks);
+    userData->table->ticksElementsSize = sizes[1];
+    free(sizes);
+    return TRUE;
+}
+
 int InitBilliardsTable( ESContext *esContext )
 {
     if ( !InitTable(esContext) ) {
@@ -383,6 +399,9 @@ int InitBilliardsTable( ESContext *esContext )
         return FALSE;
     }
     if ( !InitHoles(esContext) ) {
+        return FALSE;
+    }
+    if ( !InitTicks(esContext) ) {
         return FALSE;
     }
     return TRUE;
@@ -662,6 +681,8 @@ void DrawTable( ESContext *esContext )
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTable[0] );
+    glEnable ( GL_BLEND );
+    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
     glDrawElements ( GL_TRIANGLES, userData->table->tableElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eTable[0] );
 }
@@ -677,6 +698,8 @@ void DrawRails( ESContext *esContext )
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vRails[0] );
+    glEnable ( GL_BLEND );
+    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
     glDrawElements ( GL_TRIANGLES, userData->table->railsElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eRails[0] );
 }
@@ -697,11 +720,29 @@ void DrawHoles( ESContext *esContext )
             GL_UNSIGNED_SHORT, &userData->table->eHoles[0] );
 }
 
+void DrawTicks( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    glUseProgram ( userData->particlesProgram );
+    glUniform1i ( userData->particlesUseTexture, 0 );
+    GLfloat color[] = { 0.4f, 0.2f, 0.4f, 1.0f };
+    glUniform4fv ( userData->particlesColorLoc, 1, &color );
+
+    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+            GL_FALSE, 0, &userData->table->vTicks[0] );
+    glEnable ( GL_BLEND );
+    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
+    glDrawElements ( GL_TRIANGLES, userData->table->ticksElementsSize,
+            GL_UNSIGNED_SHORT, &userData->table->eTicks[0] );
+}
+
 void DrawBilliardsTable( ESContext *esContext )
 {
     DrawTable(esContext);
     DrawRails(esContext);
     DrawHoles(esContext);
+    DrawTicks(esContext);
     //UserData *userData = esContext->userData;
 
     //glUseProgram ( userData->particlesProgram );
@@ -801,14 +842,17 @@ void FreeTable( ESContext *esContext )
     free(userData->table->vTable);
     free(userData->table->vRails);
     free(userData->table->vHoles);
+    free(userData->table->vTicks);
 
     free(userData->table->eTable);
     free(userData->table->eRails);
     free(userData->table->eHoles);
+    free(userData->table->eTicks);
 
     free(userData->table->nTable);
     free(userData->table->nRails);
     free(userData->table->nHoles);
+    free(userData->table->nTicks);
 }
 
 void ShutDown ( ESContext *esContext )
