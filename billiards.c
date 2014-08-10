@@ -38,6 +38,8 @@
 
 #define RAILS_INNER_HEIGHT 0.74189f
 
+#define TICK 0.38203f
+
 struct Ship
 {
     GLint numVertices;
@@ -87,7 +89,6 @@ typedef struct
     // Particles Uniform location
     GLint particlesTimeLoc;
     GLint particlesColorLoc;
-    GLint particlesCenterPositionLoc;
     GLint particlesSamplerLoc;
     GLint particlesPointSize;
     GLint particlesUseTexture;
@@ -218,7 +219,6 @@ int InitParticles ( ESContext *esContext )
 
     // Get the uniform locations
     userData->particlesTimeLoc = glGetUniformLocation ( userData->particlesProgram, "u_time" );
-    userData->particlesCenterPositionLoc = glGetUniformLocation ( userData->particlesProgram, "u_centerPosition" );
     userData->particlesColorLoc = glGetUniformLocation ( userData->particlesProgram, "u_color" );
     userData->particlesSamplerLoc = glGetUniformLocation ( userData->particlesProgram, "s_texture" );
     userData->particlesPointSize = glGetUniformLocation ( userData->particlesProgram, "u_pointSize" );
@@ -226,7 +226,7 @@ int InitParticles ( ESContext *esContext )
     // Fill in particle data array
     srand ( 0 );
     float poolPts [] = {
-              -0.5,        0.0f, // white ball
+              -4 * TICK - (2*BALL_SIZE),    0.0f, // white ball
 
               0.0f,        0.0f, // row 1
 
@@ -256,7 +256,7 @@ int InitParticles ( ESContext *esContext )
         // Start position of particle
         //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
         //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
-        (*particleData++) = (*pt++);
+        (*particleData++) = (*pt++) + ((2 * TICK) + (2*BALL_SIZE));
         (*particleData++) = (*pt++);
 
         // Velocities
@@ -265,7 +265,7 @@ int InitParticles ( ESContext *esContext )
         //(*particleData++) = v[0];
         //(*particleData++) = v[1];
         if ( i == 0 ) {
-            (*particleData++) = 1.0f;
+            (*particleData++) = 0.0f;
             (*particleData++) = 0.0f;
         } else {
             (*particleData++) = 0.0f;
@@ -302,10 +302,9 @@ int InitParticles ( ESContext *esContext )
     float color[4];
 
     // Pick a new start location and color
-    centerPos[0] = ( (float)(rand() % 10000) / 10000.0f ) - 0.5f;
-    centerPos[1] = ( (float)(rand() % 10000) / 10000.0f ) - 0.5f;
+    //centerPos[0] = ( (float)(rand() % 10000) / 10000.0f ) - 0.5f;
+    //centerPos[1] = ( (float)(rand() % 10000) / 10000.0f ) - 0.5f;
 
-    glUniform3fv ( userData->particlesCenterPositionLoc, 1, &centerPos[0] );
 
     // Random color
     color[0] = ( (float)(rand() % 10000) / 20000.0f ) + 0.5f;
