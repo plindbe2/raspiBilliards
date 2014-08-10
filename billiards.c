@@ -265,7 +265,7 @@ int InitParticles ( ESContext *esContext )
         //(*particleData++) = v[0];
         //(*particleData++) = v[1];
         if ( i == 0 ) {
-            (*particleData++) = 0.0f;
+            (*particleData++) = 1.0f;
             (*particleData++) = 0.0f;
         } else {
             (*particleData++) = 0.0f;
@@ -298,7 +298,7 @@ int InitParticles ( ESContext *esContext )
 
     glUseProgram ( userData->particlesProgram );
 
-    float centerPos[2];
+    //float centerPos[2];
     float color[4];
 
     // Pick a new start location and color
@@ -676,7 +676,7 @@ void DrawTable( ESContext *esContext )
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
     GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    glUniform4fv ( userData->particlesColorLoc, 1, color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTable[0] );
@@ -693,7 +693,7 @@ void DrawRails( ESContext *esContext )
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
     GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    glUniform4fv ( userData->particlesColorLoc, 1, color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vRails[0] );
@@ -710,7 +710,7 @@ void DrawHoles( ESContext *esContext )
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
     GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    glUniform4fv ( userData->particlesColorLoc, 1, color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
@@ -726,7 +726,7 @@ void DrawTicks( ESContext *esContext )
     glUseProgram ( userData->particlesProgram );
     glUniform1i ( userData->particlesUseTexture, 0 );
     GLfloat color[] = { 0.4f, 0.2f, 0.4f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, &color );
+    glUniform4fv ( userData->particlesColorLoc, 1, color );
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTicks[0] );
@@ -888,12 +888,12 @@ int main ( int argc, char *argv[] )
         -1.0f,  1.0f,
          0.0f,  1.0f,
     };
-    quad.v = &vQuad;
+    quad.v = vQuad;
 
     GLushort eQuad[] = {
         0, 1, 2, 0, 2, 3
     };
-    quad.e = &eQuad;
+    quad.e = eQuad;
 
     userData.quad = &quad;
 
