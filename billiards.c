@@ -19,6 +19,7 @@
 #include "esUtil.h"
 #include "glesTools.h"
 #include "glesVMath.h"
+#include <sys/time.h>
 
 #define NUM_PARTICLES	16
 #define PARTICLE_SIZE   4
@@ -29,7 +30,8 @@
 
 #define TABLE_SIDE_LENGTH 0.75f
 
-#define BALL_SIZE 0.03f
+#define BALL_SIZE 0.033f
+#define POINT_SIZE 30.0f
 
 #define TABLE_MODEL "model/table.obj"
 #define RAILS_MODEL "model/rails.obj"
@@ -137,6 +139,8 @@ typedef struct
 
     // ============Table============ //
     struct Table * table;
+
+    float pauseTime;
 
 } UserData;
 
@@ -265,7 +269,7 @@ int InitParticles ( ESContext *esContext )
         //(*particleData++) = v[0];
         //(*particleData++) = v[1];
         if ( i == 0 ) {
-            (*particleData++) = 1.0f;
+            (*particleData++) = 0.0f;
             (*particleData++) = 0.0f;
         } else {
             (*particleData++) = 0.0f;
@@ -315,7 +319,7 @@ int InitParticles ( ESContext *esContext )
 
     glUniform4fv ( userData->particlesColorLoc, 1, &color[0] );
     // TODO: Make this a function of resolution and remove POINT_RADIUS
-    glUniform1f ( userData->particlesPointSize, 20.0f );
+    glUniform1f ( userData->particlesPointSize, POINT_SIZE );
 
     return TRUE;
 }
@@ -556,6 +560,18 @@ void CheckForBoundaryCollisions( GLfloat *particleData )
     }
 }
 
+int CheckForMovement( GLfloat *particleData )
+{
+    int i;
+    for ( i=0 ; i < NUM_PARTICLES ; ++i ) {
+        GLfloat *point = &particleData[i * PARTICLE_SIZE];
+        if (fabs(point[2]) > 0.0f || fabs(point[3]) > 0.0f) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void UpdatePositions ( ESContext *esContext, float deltaTime )
 {
     UserData *userData = esContext->userData;
@@ -573,6 +589,12 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
             GLfloat tmpAccelVec[2];
             scale(&tmpAccelVec[0], &particleData[2], POINT_ACCELERATION * deltaTime, 2);
             UPlusV(&particleData[2], &particleData[2], &tmpAccelVec[0], 2);
+            if(fabs(particleData[2]) < 0.01f) {
+                particleData[2] = 0.0f;
+            }
+            if(fabs(particleData[3]) < 0.01f) {
+                particleData[3] = 0.0f;
+            }
         }
     }
 }
@@ -583,13 +605,28 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
 void Update ( ESContext *esContext, float deltaTime )
 {
     UserData *userData = esContext->userData;
+    GLfloat *particleData = &userData->particleData[0];
 
     userData->time += deltaTime;
     // Load uniform time variable
 
     glUseProgram ( userData->particlesProgram );
     glUniform1f ( userData->particlesTimeLoc, userData->time );
-    UpdatePositions( esContext, deltaTime );
+    float scanfTime = 0.0f;
+    if (!CheckForMovement( particleData )) {
+        printf("Enter Velocity: ");
+        float x, y;
+        struct timeval t1, t2;
+        struct timezone tz;
+        gettimeofday ( &t1 , &tz );
+        scanf("%f %f", &x, &y);
+        gettimeofday( &t2, &tz );
+        scanfTime = (float)(t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6);
+        particleData[2] = (GLfloat) x;
+        particleData[3] = (GLfloat) y;
+    }
+    UpdatePositions( esContext, deltaTime - userData->pauseTime );
+    userData->pauseTime = scanfTime;
 }
 
 void DrawParticles ( ESContext *esContext )
