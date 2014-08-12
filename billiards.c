@@ -37,6 +37,7 @@
 #define RAILS_MODEL "model/rails.obj"
 #define HOLES_MODEL "model/holes.obj"
 #define TICKS_MODEL "model/ticks.obj"
+#define COLLISION_MODEL "model/collision.obj"
 
 #define RAILS_INNER_HEIGHT 0.74189f
 
@@ -61,21 +62,21 @@ struct Table
     GLint railsElementsSize;
     GLint holesElementsSize;
     GLint ticksElementsSize;
+    GLint collisionElementsSize;
 
     GLfloat *vTable;
     GLfloat *vRails;
     GLfloat *vHoles;
     GLfloat *vTicks;
+    GLfloat *vCollision;
 
     GLushort *eTable;
     GLushort *eRails;
     GLushort *eHoles;
     GLushort *eTicks;
+    GLushort *eCollision;
 
-    GLfloat *nTable;
-    GLfloat *nRails;
-    GLfloat *nHoles;
-    GLfloat *nTicks;
+    GLfloat *nCollision;
 };
 
 typedef struct
@@ -353,10 +354,8 @@ int InitTable( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    GLuint *sizes = loadObj(TABLE_MODEL, &userData->table->vTable,
-            &userData->table->eTable, &userData->table->nTable);
-    userData->table->tableElementsSize = sizes[1];
-    free(sizes);
+    userData->table->tableElementsSize = loadObj(TABLE_MODEL,
+            &userData->table->vTable, &userData->table->eTable);
     return TRUE;
 }
 
@@ -364,10 +363,8 @@ int InitRails( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    GLuint *sizes = loadObj(RAILS_MODEL, &userData->table->vRails,
-            &userData->table->eRails, &userData->table->nRails);
-    userData->table->railsElementsSize = sizes[1];
-    free(sizes);
+    userData->table->railsElementsSize = loadObj(RAILS_MODEL,
+            &userData->table->vRails, &userData->table->eRails);
     return TRUE;
 }
 
@@ -375,10 +372,8 @@ int InitHoles( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    GLuint *sizes = loadObj(HOLES_MODEL, &userData->table->vHoles,
-            &userData->table->eHoles, &userData->table->nHoles);
-    userData->table->holesElementsSize = sizes[1];
-    free(sizes);
+    userData->table->holesElementsSize = loadObj(HOLES_MODEL,
+            &userData->table->vHoles, &userData->table->eHoles);
     return TRUE;
 }
 
@@ -386,10 +381,17 @@ int InitTicks( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    GLuint *sizes = loadObj(TICKS_MODEL, &userData->table->vTicks,
-            &userData->table->eTicks, &userData->table->nTicks);
-    userData->table->ticksElementsSize = sizes[1];
-    free(sizes);
+    userData->table->ticksElementsSize = loadObj(TICKS_MODEL,
+            &userData->table->vTicks, &userData->table->eTicks);
+    return TRUE;
+}
+
+int InitCollision( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+
+    userData->table->collisionElementsSize = loadObj(COLLISION_MODEL,
+            &userData->table->vCollision, &userData->table->eCollision);
     return TRUE;
 }
 
@@ -405,6 +407,9 @@ int InitBilliardsTable( ESContext *esContext )
         return FALSE;
     }
     if ( !InitTicks(esContext) ) {
+        return FALSE;
+    }
+    if ( !InitCollision(esContext) ) {
         return FALSE;
     }
     return TRUE;
@@ -879,16 +884,15 @@ void FreeTable( ESContext *esContext )
     free(userData->table->vRails);
     free(userData->table->vHoles);
     free(userData->table->vTicks);
+    free(userData->table->vCollision);
 
     free(userData->table->eTable);
     free(userData->table->eRails);
     free(userData->table->eHoles);
     free(userData->table->eTicks);
+    free(userData->table->eCollision);
 
-    free(userData->table->nTable);
-    free(userData->table->nRails);
-    free(userData->table->nHoles);
-    free(userData->table->nTicks);
+    free(userData->table->nCollision);
 }
 
 void ShutDown ( ESContext *esContext )
