@@ -20,6 +20,7 @@
 #include "glesTools.h"
 #include "glesVMath.h"
 #include <sys/time.h>
+#include "defines.h"
 
 #define NUM_PARTICLES	16
 #define PARTICLE_SIZE   4
@@ -392,6 +393,9 @@ int InitCollision( ESContext *esContext )
 
     userData->table->collisionElementsSize = loadObj(COLLISION_MODEL,
             &userData->table->vCollision, &userData->table->eCollision);
+    userData->table->nCollision =
+            ComputeSurfaceNormals(userData->table->vCollision,
+            userData->table->eCollision, userData->table->collisionElementsSize);
     return TRUE;
 }
 
@@ -542,12 +546,14 @@ void CheckForParticleCollisions ( GLfloat *particleData )
     }
 }
 
-void CheckForBoundaryCollisions( GLfloat *particleData )
+void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
+        *e, GLint elementsSize, GLfloat *n )
 {
     // boundaryPoints is counter-clockwise starting at the lower left
     int i;
     for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         GLfloat *point = &particleData[i * PARTICLE_SIZE];
+        /*
         if( point[0] - BALL_SIZE < -2*RAILS_INNER_HEIGHT ) {
             GLfloat normal[] = {  1.0f, 0.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
@@ -561,6 +567,47 @@ void CheckForBoundaryCollisions( GLfloat *particleData )
         } else if ( point[1] + BALL_SIZE > RAILS_INNER_HEIGHT ) {
             GLfloat normal[] = {  0.0f, -1.0f };
             reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
+        }
+        */
+        unsigned int i;
+        for ( i = 1 ; i < elementsSize ; i+=2 ) {
+            GLfloat v1[2], v2[2], v3[2];
+            // TODO: maybe precompute this.
+            v1[0] = v[2*e[i]] - v[2*e[i-1]];
+            v1[1] = v[2*e[i]+1] - v[2*e[i-1]+1];
+            normalize2f(&v1[0]);
+
+            v2[0] = point[0] - v[2*e[i-1]];
+            v2[1] = point[1] - v[2*e[i-1]+1];
+            normalize2f(&v2[0]);
+
+            v3[0] = point[0] - v[2*e[i]];
+            v3[1] = point[1] - v[2*e[i]+1];
+            normalize2f(&v3[0]);
+
+            GLfloat result1, result2, result3;
+            UDotV(&result1, &v1[0], &v2[0], 2);
+            result1 = acos(result1);
+
+            scalarU(&v1[0], &v1[0], -1.0f, 2);
+            UDotV(&result2, &v1, &v3, 2);
+            result2 = acos(result2);
+
+            GLfloat normal[2];
+
+            normal[0] = v1[1];
+            normal[1] = -v1[0];
+
+            UDotV(&result3, &point[2], &normal[0], 2);
+            GLfloat size;
+            distanceSquared(&size, &v[2*e[i]], &v[2*e[i-1]], 2);
+            size = sqrt(size);
+
+            if( ((result1 <= -0.14707f * size + 0.21279f && result2 < HALFPI)
+                    || (result2 <= -0.14707f * size + 0.21279f && result1 <
+                    HALFPI)) && result3 < 0.0f ) {
+                reflectAboutNormal2f(&point[2], &point[2], &normal[0]);
+            }
         }
     }
 }
@@ -582,7 +629,9 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
     UserData *userData = esContext->userData;
     GLfloat *particleData = &userData->particleData[0];
     CheckForParticleCollisions( particleData );
-    CheckForBoundaryCollisions( particleData );
+    CheckForBoundaryCollisions( particleData, userData->table->vCollision,
+            userData->table->eCollision, userData->table->collisionElementsSize,
+            userData->table->nCollision );
     {
         int i;
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
