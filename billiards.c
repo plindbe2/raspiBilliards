@@ -478,7 +478,8 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
     GLfloat numSteps = (1.0f - (secondDiff / impactDistanceSquared)) /
             ((secondDiff - initialDiff) / impactDistanceSquared);
 
-    numSteps += 350.0f; // TODO: bad bad fudge factor
+    //numSteps += 350.0f; // TODO: bad bad fudge factor
+    numSteps += numSteps;
 
     scale(&tmpVec[0], &pos1[2], numSteps * (fabs(secondDiff - initialDiff)),
             2);
