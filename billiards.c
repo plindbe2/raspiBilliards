@@ -443,7 +443,8 @@ int Init ( ESContext *esContext )
     return TRUE;
 }
 
-void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
+void RewindToImpact(GLfloat *pos1, GLfloat *pos2, GLfloat *particleData, GLuint
+        recursionLevel)
 {
     if ( pos1 == pos2 ) {
         fprintf(stderr, "RewindToImpact Error: pos1 == pos2\n");
@@ -463,7 +464,7 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
     memcpy(&tmpPos1[0], &pos1[0], sizeof(GLfloat) * 2);
     memcpy(&tmpPos2[0], &pos2[0], sizeof(GLfloat) * 2);
 
-    GLfloat initialRewindFactor = 0.001f; // arbitrary small step.
+    GLfloat initialRewindFactor = 0.003f; // arbitrary small step.
 
     // Take the first small step.
     scale(&tmpVec[0], &pos1[2], initialRewindFactor, 2);
@@ -475,8 +476,11 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
     distanceSquared(&secondDiff, &tmpPos1[0], &tmpPos2[0], 2);
 
     // Calculate how many more steps to take.
-    GLfloat numSteps = (1.0f - (secondDiff / impactDistanceSquared)) /
-            ((secondDiff - initialDiff) / impactDistanceSquared);
+    GLfloat numSteps = 100.0f;
+    if (impactDistanceSquared > 0.0f) {
+        numSteps = (1.0f - (secondDiff / impactDistanceSquared)) / ((secondDiff
+                - initialDiff) / impactDistanceSquared);
+    }
 
     //numSteps += 350.0f; // TODO: bad bad fudge factor
     numSteps += numSteps;
@@ -492,6 +496,27 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2)
     //printf("Moving (%f, %f) to (%f, %f)\n\n", pos2[0], pos2[1], tmpPos2[0], tmpPos2[1]);
     memcpy(&pos1[0], &tmpPos1[0], sizeof(GLfloat) * 2);
     memcpy(&pos2[0], &tmpPos2[0], sizeof(GLfloat) * 2);
+    // This is mainly for the break when all balls are close together.
+    // Rewinding tends to get into another's space.
+    unsigned int i;
+    if(recursionLevel < 2) {
+        for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
+            GLfloat *pt = &particleData[i * PARTICLE_SIZE];
+            GLfloat distance;
+            if (pos1 != pt) {
+                distanceSquared(&distance, &pos1[0], &pt[0], 2);
+                if (distance <= 4*POINT_RADIUS*POINT_RADIUS ) {
+                    RewindToImpact(pos1, pt, particleData, recursionLevel+1);
+                }
+            }
+            if (pos2 != pt) {
+                distanceSquared(&distance, &pos2[0], &pt[0], 2);
+                if (distance <= 4*POINT_RADIUS*POINT_RADIUS ) {
+                    RewindToImpact(pos2, pt, particleData, recursionLevel+1);
+                }
+            }
+        }
+    }
 }
 
 void ParticleCollision(GLfloat *pos1, GLfloat *pos2)
@@ -540,7 +565,7 @@ void CheckForParticleCollisions ( GLfloat *particleData )
             if (diff1*diff1 + diff2*diff2 <= 4*POINT_RADIUS*POINT_RADIUS) {
                 //printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
                 //        point2[0], point2[1]);
-                RewindToImpact(point1, point2);
+                RewindToImpact(point1, point2, particleData, 0);
                 ParticleCollision(point1, point2);
             }
         }
@@ -554,22 +579,6 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
     int i;
     for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         GLfloat *point = &particleData[i * PARTICLE_SIZE];
-        /*
-        if( point[0] - BALL_SIZE < -2*RAILS_INNER_HEIGHT ) {
-            GLfloat normal[] = {  1.0f, 0.0f };
-            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        } else if ( point[0] + BALL_SIZE > 2*RAILS_INNER_HEIGHT ) {
-            GLfloat normal[] = { -1.0f, 0.0f };
-            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        }
-        if ( point[1] - BALL_SIZE < -RAILS_INNER_HEIGHT ) {
-            GLfloat normal[] = {  0.0f, 1.0f };
-            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        } else if ( point[1] + BALL_SIZE > RAILS_INNER_HEIGHT ) {
-            GLfloat normal[] = {  0.0f, -1.0f };
-            reflectAboutNormal2f( &point[2], &point[2], &normal[0] );
-        }
-        */
         unsigned int i;
         for ( i = 1 ; i < elementsSize ; i+=2 ) {
             GLfloat v1[2], v2[2], v3[2];
