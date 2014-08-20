@@ -143,6 +143,7 @@ typedef struct
     struct Table * table;
 
     float pauseTime;
+    ESMatrix tableMVP;
 
 } UserData;
 
@@ -279,7 +280,7 @@ int InitParticles ( ESContext *esContext )
         }
     }
 
-    userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
+    userData->particlesTextureId = LoadTexture ( "texture/test.tga" );
     if ( userData->particlesTextureId <= 0 )
     {
         return FALSE;
@@ -295,7 +296,7 @@ int InitParticles ( ESContext *esContext )
     esMatrixLoadIdentity( &modelview );
 
     // Translate away from the viewer
-    esTranslate( &modelview, 0.0, 0.0, -2.0 );
+    esTranslate( &modelview, 0.0, 0.0, -1.99999 );
 
     esMatrixLoadIdentity( &perspective );
     esPerspective(&perspective, 60.0f, (float)esContext->width /
@@ -357,6 +358,20 @@ int InitTable( ESContext *esContext )
 
     userData->table->tableElementsSize = loadObj(TABLE_MODEL,
             &userData->table->vTable, &userData->table->eTable);
+
+    // Generate a model view matrix to rotate/translate the cube
+    ESMatrix modelview;
+    ESMatrix perspective;
+
+    esMatrixLoadIdentity( &modelview );
+
+    // Translate away from the viewer
+    esTranslate( &modelview, 0.0, 0.0, -2.0 );
+
+    esMatrixLoadIdentity( &perspective );
+    esPerspective(&perspective, 60.0f, (float)esContext->width /
+                  (float)esContext->height, 1.0f, 20.0f);
+    esMatrixMultiply( &userData->tableMVP, &modelview, &perspective );
     return TRUE;
 }
 
@@ -709,8 +724,10 @@ void DrawParticles ( ESContext *esContext )
 
     glEnableVertexAttribArray ( userData->particlesStartPositionLoc );
     // Blend particles
-    glEnable ( GL_BLEND );
-    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
+    //glEnable ( GL_BLEND );
+    //glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
+    glDisable( GL_BLEND );
+    glEnable(GL_DEPTH_TEST);
 
     // Bind the texture
     glActiveTexture ( GL_TEXTURE0 );
@@ -839,6 +856,10 @@ void DrawTicks( ESContext *esContext )
 
 void DrawBilliardsTable( ESContext *esContext )
 {
+    UserData *userData = esContext->userData;
+
+    glUniformMatrix4fv(userData->particlesMVPLoc, 1, GL_FALSE,
+                       &userData->tableMVP.m[0][0]);
     DrawTable(esContext);
     DrawRails(esContext);
     DrawHoles(esContext);
@@ -925,8 +946,8 @@ void Draw ( ESContext *esContext )
     // Clear the color buffer
     glClear ( GL_COLOR_BUFFER_BIT );
 
-    DrawParticles( esContext );
     DrawBilliardsTable( esContext );
+    DrawParticles( esContext );
     //int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
     //DrawQuad( esContext );
