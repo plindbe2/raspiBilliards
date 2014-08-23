@@ -206,6 +206,17 @@ GLuint LoadPngTexture ( char *fileName )
     return texId;
 }
 
+GLuint LoadWhiteTex( void )
+{
+    GLuint whiteTexHandle;
+    GLubyte whiteTex[] = { 255, 255, 255, 0 };
+    glActiveTexture(GL_TEXTURE0);
+    glGenTextures(1, &whiteTexHandle);
+    glBindTexture(GL_TEXTURE_2D, whiteTexHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whiteTex);
+    return whiteTexHandle;
+}
+
 int InitFBO ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
@@ -310,7 +321,8 @@ int InitParticles ( ESContext *esContext )
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/test.tga" );
-    userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
+    //userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
+    userData->particlesTextureId = LoadWhiteTex();
     if ( userData->particlesTextureId <= 0 )
     {
         return FALSE;
