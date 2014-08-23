@@ -177,6 +177,35 @@ GLuint LoadTexture ( char *fileName )
     return texId;
 }
 
+GLuint LoadPngTexture ( char *fileName )
+{
+    int *width,
+        *height;
+    unsigned char *buffer = PngTexture( fileName, &width, &height );
+    GLuint texId;
+
+    if ( buffer == NULL )
+    {
+        esLogMessage ( "Error loading (%s) image.\n", fileName );
+        return 0;
+    }
+
+    glGenTextures ( 1, &texId );
+    glBindTexture ( GL_TEXTURE_2D, texId );
+
+    glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, *width, *height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer );
+    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+
+    free ( buffer );
+    free ( width );
+    free ( height );
+
+    return texId;
+}
+
 int InitFBO ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
@@ -280,7 +309,8 @@ int InitParticles ( ESContext *esContext )
         }
     }
 
-    userData->particlesTextureId = LoadTexture ( "texture/test.tga" );
+    //userData->particlesTextureId = LoadTexture ( "texture/test.tga" );
+    userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
     if ( userData->particlesTextureId <= 0 )
     {
         return FALSE;
