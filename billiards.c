@@ -142,7 +142,12 @@ typedef struct
     struct Quad * quad;
 
     // ============Table============ //
+    GLuint tableProgram;
     struct Table * table;
+    GLuint tableStartPositionLoc;
+    GLuint tableTimeLoc;
+    GLuint tableColorLoc;
+    GLuint tablePointSize;
 
     float pauseTime;
     ESMatrix tableMVP;
@@ -211,8 +216,8 @@ GLuint LoadPngTexture ( char *fileName )
 GLuint LoadWhiteTex( void )
 {
     GLuint whiteTexHandle;
-    GLubyte whiteTex[] = { 255, 255, 255, 0 };
-    glActiveTexture(GL_TEXTURE0);
+    GLubyte whiteTex[] = { 0, 0, 0, 255 };
+    //glActiveTexture(GL_TEXTURE0);
     glGenTextures(1, &whiteTexHandle);
     glBindTexture(GL_TEXTURE_2D, whiteTexHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whiteTex);
@@ -322,9 +327,9 @@ int InitParticles ( ESContext *esContext )
         }
     }
 
-    //userData->particlesTextureId = LoadTexture ( "texture/test.tga" );
-    userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
-    //userData->particlesTextureId = LoadWhiteTex();
+    //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
+    //userData->particlesTextureId = LoadPngTexture( "texture/test2.png" );
+    userData->particlesTextureId = LoadWhiteTex();
     if ( userData->particlesTextureId <= 0 )
     {
         return FALSE;
@@ -460,6 +465,24 @@ int InitCollision( ESContext *esContext )
 
 int InitBilliardsTable( ESContext *esContext )
 {
+    UserData *userData = esContext->userData;
+
+    char * vShaderStr = loadShader( "shader/billiards.vert" );
+    char * fShaderStr = loadShader( "shader/table.frag" );
+
+    // Load the shaders and get a linked program object
+    userData->tableProgram = esLoadProgram ( vShaderStr, fShaderStr );
+    free(vShaderStr);
+    free(fShaderStr);
+
+    // Get the attribute locations
+    userData->tableStartPositionLoc = glGetAttribLocation ( userData->tableProgram, "a_startPosition" );
+
+    // Get the uniform locations
+    userData->tableTimeLoc = glGetUniformLocation ( userData->tableProgram, "u_time" );
+    userData->tableColorLoc = glGetUniformLocation ( userData->tableProgram, "u_color" );
+    userData->tablePointSize = glGetUniformLocation ( userData->tableProgram, "u_pointSize" );
+
     if ( !InitTable(esContext) ) {
         return FALSE;
     }
@@ -499,6 +522,7 @@ int Init ( ESContext *esContext )
     glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
 
     userData->time = 0.0f;
+    glEnable( GL_DEPTH_TEST );
     return TRUE;
 }
 
@@ -735,6 +759,8 @@ void Update ( ESContext *esContext, float deltaTime )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1f ( userData->particlesTimeLoc, userData->time );
+    glUseProgram ( userData->tableProgram );
+    glUniform1f ( userData->tableTimeLoc, userData->time );
     float scanfTime = 0.0f;
     if (!CheckForMovement( particleData )) {
         printf("Enter Velocity: ");
@@ -768,10 +794,8 @@ void DrawParticles ( ESContext *esContext )
 
     glEnableVertexAttribArray ( userData->particlesStartPositionLoc );
     // Blend particles
-    glEnable ( GL_BLEND );
-    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
-    glDisable( GL_BLEND );
-    glEnable(GL_DEPTH_TEST);
+    //glEnable ( GL_BLEND );
+    //glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
 
     // Bind the texture
     glActiveTexture ( GL_TEXTURE0 );
@@ -835,12 +859,11 @@ void DrawTable( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    glUseProgram ( userData->particlesProgram );
-    glUniform1i ( userData->particlesUseTexture, 0 );
+    glUseProgram ( userData->tableProgram );
     GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, color );
+    glUniform4fv ( userData->tableColorLoc, 1, color );
 
-    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+    glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTable[0] );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
@@ -852,12 +875,11 @@ void DrawRails( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    glUseProgram ( userData->particlesProgram );
-    glUniform1i ( userData->particlesUseTexture, 0 );
+    glUseProgram ( userData->tableProgram );
     GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, color );
+    glUniform4fv ( userData->tableColorLoc, 1, color );
 
-    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+    glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vRails[0] );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
@@ -869,12 +891,11 @@ void DrawHoles( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    glUseProgram ( userData->particlesProgram );
-    glUniform1i ( userData->particlesUseTexture, 0 );
+    glUseProgram ( userData->tableProgram );
     GLfloat color[] = { 0.0f, 0.2f, 0.0f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, color );
+    glUniform4fv ( userData->tableColorLoc, 1, color );
 
-    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+    glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
     //glDisable ( GL_BLEND );
     glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
@@ -885,12 +906,11 @@ void DrawTicks( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    glUseProgram ( userData->particlesProgram );
-    glUniform1i ( userData->particlesUseTexture, 0 );
+    glUseProgram ( userData->tableProgram );
     GLfloat color[] = { 0.4f, 0.2f, 0.4f, 1.0f };
-    glUniform4fv ( userData->particlesColorLoc, 1, color );
+    glUniform4fv ( userData->tableColorLoc, 1, color );
 
-    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+    glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTicks[0] );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
@@ -901,6 +921,7 @@ void DrawTicks( ESContext *esContext )
 void DrawBilliardsTable( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
+    glUseProgram (userData->tableProgram);
 
     glUniformMatrix4fv(userData->particlesMVPLoc, 1, GL_FALSE,
                        &userData->tableMVP.m[0][0]);
@@ -1093,7 +1114,7 @@ int main ( int argc, char *argv[] )
     esInitContext ( &esContext );
     esContext.userData = &userData;
 
-    esCreateWindow ( &esContext, "ParticleSystem", 1920, 1080, ES_WINDOW_RGB );
+    esCreateWindow ( &esContext, "ParticleSystem", 1920, 1080, ES_WINDOW_RGB | ES_WINDOW_DEPTH | ES_WINDOW_ALPHA );
 
     if ( !Init ( &esContext ) )
         return 0;
@@ -1101,6 +1122,7 @@ int main ( int argc, char *argv[] )
     esRegisterDrawFunc ( &esContext, Draw );
     esRegisterUpdateFunc ( &esContext, Update );
 
+/*
     glGenRenderbuffers(1, &userData.depthRenderbuffer);
 
     glBindRenderbuffer(GL_RENDERBUFFER, userData.depthRenderbuffer);
@@ -1110,6 +1132,7 @@ int main ( int argc, char *argv[] )
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
             GL_RENDERBUFFER, userData.depthRenderbuffer);
 
+*/
     esMainLoop ( &esContext );
 
     ShutDown ( &esContext );
