@@ -113,6 +113,8 @@ typedef struct
     ESMatrix particlesMVP;
     GLint particlesMVPLoc;
 
+    GLuint depthRenderbuffer;
+
     // =========renderToTex========= //
 
     GLuint renderToTexFramebuffer;
@@ -321,8 +323,8 @@ int InitParticles ( ESContext *esContext )
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/test.tga" );
-    //userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
-    userData->particlesTextureId = LoadWhiteTex();
+    userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
+    //userData->particlesTextureId = LoadWhiteTex();
     if ( userData->particlesTextureId <= 0 )
     {
         return FALSE;
@@ -766,8 +768,8 @@ void DrawParticles ( ESContext *esContext )
 
     glEnableVertexAttribArray ( userData->particlesStartPositionLoc );
     // Blend particles
-    //glEnable ( GL_BLEND );
-    //glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
+    glEnable ( GL_BLEND );
+    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
     glDisable( GL_BLEND );
     glEnable(GL_DEPTH_TEST);
 
@@ -874,7 +876,7 @@ void DrawHoles( ESContext *esContext )
 
     glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
-    glDisable ( GL_BLEND );
+    //glDisable ( GL_BLEND );
     glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eHoles[0] );
 }
@@ -986,10 +988,10 @@ void Draw ( ESContext *esContext )
     glViewport ( 0, 0, esContext->width, esContext->height );
 
     // Clear the color buffer
-    glClear ( GL_COLOR_BUFFER_BIT );
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    DrawBilliardsTable( esContext );
     DrawParticles( esContext );
+    DrawBilliardsTable( esContext );
     //int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
     //DrawQuad( esContext );
@@ -1098,6 +1100,15 @@ int main ( int argc, char *argv[] )
 
     esRegisterDrawFunc ( &esContext, Draw );
     esRegisterUpdateFunc ( &esContext, Update );
+
+    glGenRenderbuffers(1, &userData.depthRenderbuffer);
+
+    glBindRenderbuffer(GL_RENDERBUFFER, userData.depthRenderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
+            1920, 1080);
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_RENDERBUFFER, userData.depthRenderbuffer);
 
     esMainLoop ( &esContext );
 
