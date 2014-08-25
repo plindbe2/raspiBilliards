@@ -216,7 +216,7 @@ GLuint LoadPngTexture ( char *fileName )
 GLuint LoadWhiteTex( void )
 {
     GLuint whiteTexHandle;
-    GLubyte whiteTex[] = { 0, 0, 0, 255 };
+    GLubyte whiteTex[] = { 0, 0, 0, 0 };
     //glActiveTexture(GL_TEXTURE0);
     glGenTextures(1, &whiteTexHandle);
     glBindTexture(GL_TEXTURE_2D, whiteTexHandle);
@@ -328,8 +328,8 @@ int InitParticles ( ESContext *esContext )
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
-    //userData->particlesTextureId = LoadPngTexture( "texture/test2.png" );
-    userData->particlesTextureId = LoadWhiteTex();
+    userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
+    //userData->particlesTextureId = LoadWhiteTex();
     if ( userData->particlesTextureId <= 0 )
     {
         return FALSE;
@@ -345,7 +345,7 @@ int InitParticles ( ESContext *esContext )
     esMatrixLoadIdentity( &modelview );
 
     // Translate away from the viewer
-    esTranslate( &modelview, 0.0, 0.0, -1.99999 );
+    esTranslate( &modelview, 0.0, 0.0, -1.9999 );
 
     esMatrixLoadIdentity( &perspective );
     esPerspective(&perspective, 60.0f, (float)esContext->width /
@@ -781,6 +781,11 @@ void Update ( ESContext *esContext, float deltaTime )
 void DrawParticles ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
+    glEnable( GL_DEPTH_TEST );
+    glClearDepthf(1.0f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable( GL_BLEND );
+
 
     // Use the program object
     glUseProgram ( userData->particlesProgram );
@@ -865,6 +870,7 @@ void DrawTable( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTable[0] );
+    //glDisable( GL_DEPTH_TEST );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
     glDrawElements ( GL_TRIANGLES, userData->table->tableElementsSize,
@@ -881,8 +887,9 @@ void DrawRails( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vRails[0] );
+    glDisable( GL_DEPTH_TEST );
     glEnable ( GL_BLEND );
-    glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
+    //glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
     glDrawElements ( GL_TRIANGLES, userData->table->railsElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eRails[0] );
 }
@@ -897,7 +904,8 @@ void DrawHoles( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
-    //glDisable ( GL_BLEND );
+    //glDisable( GL_DEPTH_TEST );
+    glDisable ( GL_BLEND );
     glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eHoles[0] );
 }
@@ -912,6 +920,7 @@ void DrawTicks( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTicks[0] );
+    //glDisable( GL_DEPTH_TEST );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
     glDrawElements ( GL_TRIANGLES, userData->table->ticksElementsSize,
@@ -1009,10 +1018,11 @@ void Draw ( ESContext *esContext )
     glViewport ( 0, 0, esContext->width, esContext->height );
 
     // Clear the color buffer
+    glClearDepthf( 1.0f );
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    DrawParticles( esContext );
     DrawBilliardsTable( esContext );
+    DrawParticles( esContext );
     //int hasRedPix = ReadPixels( esContext );
     //printf("%d\n", hasRedPix);
     //DrawQuad( esContext );
