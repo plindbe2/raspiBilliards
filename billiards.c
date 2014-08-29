@@ -24,18 +24,19 @@
 
 #define NUM_PARTICLES	16
 #define PARTICLE_SIZE   4 // Has velocity.
-#define PARTICLE_QUAD_SIZE 8 // Doesn't have velocity.
+#define PARTICLE_QUAD_SIZE 24 // Doesn't have velocity.  Has texture coords.
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
 #define POINT_RADIUS 0.02f
 #define POINT_ACCELERATION -0.2f
-#define PATICLES_QUAD_HALF_SIDELENGTH .2
+#define PATICLES_QUAD_HALF_SIDELENGTH .03
 
 #define TABLE_SIDE_LENGTH 0.75f
 
 #define BALL_SIZE 0.033f
 #define POINT_SIZE 30.0f
 
+// TODO: Use a texture for all but collision.
 #define TABLE_MODEL "model/table.obj"
 #define RAILS_MODEL "model/rails.obj"
 #define HOLES_MODEL "model/holes.obj"
@@ -90,7 +91,8 @@ typedef struct
     GLuint particlesProgram;
 
     // Particles Attribute locations
-    GLint  particlesStartPositionLoc;
+    GLint particlesStartPositionLoc;
+    GLint particlesQuadTexLoc;
 
     // Particles Uniform location
     GLint particlesTimeLoc;
@@ -274,14 +276,23 @@ void ParticleToQuad( const GLfloat * particle, GLfloat * quad )
     quad[0] = particle[0] + PATICLES_QUAD_HALF_SIDELENGTH; // bottom right.
     quad[1] = particle[1] - PATICLES_QUAD_HALF_SIDELENGTH;
 
-    quad[2] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // top left
-    quad[3] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
+    quad[4] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // top left
+    quad[5] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
 
-    quad[4] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // bottom left.
-    quad[5] = particle[1] - PATICLES_QUAD_HALF_SIDELENGTH;
+    quad[8] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // bottom left.
+    quad[9] = particle[1] - PATICLES_QUAD_HALF_SIDELENGTH;
 
-    quad[6] = particle[0] + PATICLES_QUAD_HALF_SIDELENGTH; // top right.
-    quad[7] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
+    // Sadly, due to lack of primitive restart, we have to duplicate vertices.
+
+    quad[12] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // top left
+    quad[13] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
+
+    quad[16] = particle[0] + PATICLES_QUAD_HALF_SIDELENGTH; // bottom right.
+    quad[17] = particle[1] - PATICLES_QUAD_HALF_SIDELENGTH;
+
+    quad[20] = particle[0] + PATICLES_QUAD_HALF_SIDELENGTH; // top right.
+    quad[21] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
+
 }
 
 int InitParticles ( ESContext *esContext )
@@ -299,6 +310,7 @@ int InitParticles ( ESContext *esContext )
 
     // Get the attribute locations
     userData->particlesStartPositionLoc = glGetAttribLocation ( userData->particlesProgram, "a_startPosition" );
+    userData->particlesQuadTexLoc = glGetAttribLocation ( userData->particlesProgram, "a_texCoords" );
 
     // Get the uniform locations
     userData->particlesTimeLoc = glGetUniformLocation ( userData->particlesProgram, "u_time" );
@@ -348,6 +360,25 @@ int InitParticles ( ESContext *esContext )
         (*ptr++) = 0.0f;
 
         ParticleToQuad(particleData, particleQuadData);
+    }
+    // TODO: replace.
+    GLfloat particlesTex[] = {
+        1.0f, 0.0f, // Bottom right
+        0.0f, 1.0f, // Top left
+        0.0f, 0.0f, // Bottom left
+        0.0f, 1.0f, // Top left
+        1.0f, 0.0f, // Bottom right
+        1.0f, 1.0f  // Top right
+    };
+    // Texture points are strided.
+    for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
+        GLfloat *particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
+        int j = 1;
+        pt = &particlesTex[0];
+        for ( ; j <= (PARTICLE_QUAD_SIZE / PARTICLE_SIZE) ; ++j ) {
+            particleQuadData[4*j-2] = (*pt++);
+            particleQuadData[4*j-1] = (*pt++);
+        }
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
@@ -550,7 +581,8 @@ int Init ( ESContext *esContext )
     return TRUE;
 }
 
-void RewindToImpact(GLfloat *pos1, GLfloat *pos2, GLfloat *particleData, GLuint
+void RewindToImpact(GLfloat *pos1, GLfloat *pos2, GLfloat *posQuad1, GLfloat
+        *posQuad2, GLfloat *particleData, GLfloat *particleQuadData, GLuint
         recursionLevel)
 {
     if ( pos1 == pos2 ) {
@@ -603,23 +635,28 @@ void RewindToImpact(GLfloat *pos1, GLfloat *pos2, GLfloat *particleData, GLuint
     //printf("Moving (%f, %f) to (%f, %f)\n\n", pos2[0], pos2[1], tmpPos2[0], tmpPos2[1]);
     memcpy(&pos1[0], &tmpPos1[0], sizeof(GLfloat) * 2);
     memcpy(&pos2[0], &tmpPos2[0], sizeof(GLfloat) * 2);
+    ParticleToQuad(pos1, posQuad1);
+    ParticleToQuad(pos2, posQuad2);
     // This is mainly for the break when all balls are close together.
     // Rewinding tends to get into another's space.
     unsigned int i;
     if(recursionLevel < 2) {
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
             GLfloat *pt = &particleData[i * PARTICLE_SIZE];
+            GLfloat *ptQuad = &particleQuadData[ i * PARTICLE_QUAD_SIZE ];
             GLfloat distance;
             if (pos1 != pt) {
                 distanceSquared(&distance, &pos1[0], &pt[0], 2);
                 if (distance <= 4*POINT_RADIUS*POINT_RADIUS ) {
-                    RewindToImpact(pos1, pt, particleData, recursionLevel+1);
+                    RewindToImpact(pos1, pt, posQuad1, ptQuad, particleData,
+                            particleQuadData, recursionLevel+1);
                 }
             }
             if (pos2 != pt) {
                 distanceSquared(&distance, &pos2[0], &pt[0], 2);
                 if (distance <= 4*POINT_RADIUS*POINT_RADIUS ) {
-                    RewindToImpact(pos2, pt, particleData, recursionLevel+1);
+                    RewindToImpact(pos2, pt, posQuad2, ptQuad, particleData,
+                            particleQuadData, recursionLevel+1);
                 }
             }
         }
@@ -658,21 +695,24 @@ void ParticleCollision(GLfloat *pos1, GLfloat *pos2)
     memcpy(&pos2[2], &newVel2[0], sizeof(GLfloat) * 2);
 }
 
-void CheckForParticleCollisions ( GLfloat *particleData )
+void CheckForParticleCollisions ( GLfloat *particleData, GLfloat *particleQuadData )
 {
     int i;
     for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         int j;
         GLfloat *point1 = &particleData[i * PARTICLE_SIZE];
+        GLfloat *pointQuad1 = &particleQuadData[ i * PARTICLE_QUAD_SIZE ];
         for ( j = i+1 ; j < NUM_PARTICLES ; ++j ) {
             GLfloat *point2 = &particleData[j * PARTICLE_SIZE];
+            GLfloat *pointQuad2 = &particleQuadData[ j * PARTICLE_QUAD_SIZE  ];
             GLfloat diff1 = point1[0] - point2[0];
             GLfloat diff2 = point1[1] - point2[1];
 
             if (diff1*diff1 + diff2*diff2 <= 4*POINT_RADIUS*POINT_RADIUS) {
                 //printf("Collision: (%f, %f), (%f, %f)\n", point1[0], point1[1],
                 //        point2[0], point2[1]);
-                RewindToImpact(point1, point2, particleData, 0);
+                RewindToImpact(point1, point2, pointQuad1, pointQuad2,
+                        particleData, particleQuadData, 0);
                 ParticleCollision(point1, point2);
             }
         }
@@ -745,7 +785,8 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
 {
     UserData *userData = esContext->userData;
     GLfloat *particleData = &userData->particleData[0];
-    CheckForParticleCollisions( particleData );
+    GLfloat *particleQuadData = &userData->particleQuadData[0];
+    CheckForParticleCollisions( particleData, particleQuadData );
     CheckForBoundaryCollisions( particleData, userData->table->vCollision,
             userData->table->eCollision, userData->table->collisionElementsSize,
             userData->table->nCollision );
@@ -753,9 +794,11 @@ void UpdatePositions ( ESContext *esContext, float deltaTime )
         int i;
         for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
             particleData = &userData->particleData[i * PARTICLE_SIZE];
+            particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
 
             particleData[0] += particleData[2] * deltaTime;
             particleData[1] += particleData[3] * deltaTime;
+            ParticleToQuad(particleData, particleQuadData);
 
             GLfloat tmpAccelVec[2];
             scale(&tmpAccelVec[0], &particleData[2], POINT_ACCELERATION * deltaTime, 2);
@@ -816,12 +859,26 @@ void DrawParticles ( ESContext *esContext )
     // This changes when we call DrawTable.
     glUniform1i ( userData->particlesUseTexture, 1 );
 
-    glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
-            GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
-            &userData->particleData[0] );
-
+    //glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
+    //        GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
+    //        &userData->particleData[0] );
+    glVertexAttribPointer( userData->particlesStartPositionLoc,
+                           2,
+                           GL_FLOAT,
+                           GL_FALSE,
+                           PARTICLE_SIZE * sizeof(GLfloat),
+                           &userData->particleQuadData[0]
+                         );
+    glVertexAttribPointer( userData->particlesQuadTexLoc,
+                           2,
+                           GL_FLOAT,
+                           GL_FALSE,
+                           PARTICLE_SIZE * sizeof(GLfloat),
+                           &userData->particleQuadData[2]
+                         );
 
     glEnableVertexAttribArray ( userData->particlesStartPositionLoc );
+    glEnableVertexAttribArray ( userData->particlesQuadTexLoc );
     // Blend particles
     //glEnable ( GL_BLEND );
     //glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
@@ -853,7 +910,7 @@ void DrawParticles ( ESContext *esContext )
     //    glViewport ( 0, 0, esContext->width, esContext->height );
     //}
     glUniform4fv ( userData->particlesColorLoc, 1, &userData->particlesColor[0] );
-    glDrawArrays( GL_POINTS, 0, NUM_PARTICLES );
+    glDrawArrays( GL_TRIANGLES, 0, NUM_PARTICLES * (PARTICLE_QUAD_SIZE / PARTICLE_SIZE) );
 }
 
 void DrawQuad( ESContext *esContext )
