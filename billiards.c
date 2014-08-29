@@ -98,7 +98,8 @@ typedef struct
     GLint particlesUseTexture;
 
     // Particles Texture handle
-    GLuint particlesTextureId;
+    //GLuint particlesTextureId;
+    GLuint *particlesTextures;
 
     // Particles vertex data
     float particleData[ NUM_PARTICLES * PARTICLE_SIZE ];
@@ -211,6 +212,16 @@ GLuint LoadPngTexture ( char *fileName )
     free ( height );
 
     return texId;
+}
+
+void LoadBallTextures ( GLuint *textures )
+{
+    int i = 0;
+    for ( ; i < 16 ; ++i) {
+        char str[15];
+        sprintf(str, "texture/%d.png", i);
+        textures[i] = LoadPngTexture( str );
+    }
 }
 
 GLuint LoadWhiteTex( void )
@@ -328,12 +339,13 @@ int InitParticles ( ESContext *esContext )
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
-    userData->particlesTextureId = LoadPngTexture( "texture/test.png" );
+    //userData->particlesTextureId = LoadPngTexture( "texture/4.png" );
+    LoadBallTextures( userData->particlesTextures );
     //userData->particlesTextureId = LoadWhiteTex();
-    if ( userData->particlesTextureId <= 0 )
-    {
-        return FALSE;
-    }
+    //if ( userData->particlesTextureId <= 0 )
+    //{
+    //    return FALSE;
+    //}
 
     // Set up the perspective matrix.
     userData->particlesMVPLoc = glGetUniformLocation ( userData->particlesProgram, "u_MVP" );
@@ -804,7 +816,7 @@ void DrawParticles ( ESContext *esContext )
 
     // Bind the texture
     glActiveTexture ( GL_TEXTURE0 );
-    glBindTexture ( GL_TEXTURE_2D, userData->particlesTextureId );
+    glBindTexture ( GL_TEXTURE_2D, userData->particlesTextures[8] );
     glEnable ( GL_TEXTURE_2D );
 
     // Set the sampler texture unit to 0
@@ -905,7 +917,7 @@ void DrawHoles( ESContext *esContext )
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
     //glDisable( GL_DEPTH_TEST );
-    glDisable ( GL_BLEND );
+    //glDisable ( GL_BLEND );
     glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
             GL_UNSIGNED_SHORT, &userData->table->eHoles[0] );
 }
@@ -1055,7 +1067,7 @@ void ShutDown ( ESContext *esContext )
     UserData *userData = esContext->userData;
 
     // Delete texture object
-    glDeleteTextures ( 1, &userData->particlesTextureId );
+    glDeleteTextures ( 16, &userData->particlesTextures[0] );
     glDeleteTextures ( 1, &userData->quadTextureId );
 
     // Delete program object
@@ -1120,6 +1132,9 @@ int main ( int argc, char *argv[] )
     // Setup renderToTexTexWidth/Height
     userData.renderToTexTexWidth = RENDER_TO_TEX_WIDTH;
     userData.renderToTexTexHeight = RENDER_TO_TEX_HEIGHT;
+
+    GLuint particlesTextures[16];
+    userData.particlesTextures = &particlesTextures[0];
 
     esInitContext ( &esContext );
     esContext.userData = &userData;
