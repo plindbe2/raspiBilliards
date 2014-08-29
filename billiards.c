@@ -781,8 +781,8 @@ void Update ( ESContext *esContext, float deltaTime )
 void DrawParticles ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
-    glEnable( GL_DEPTH_TEST );
-    glClearDepthf(1.0f);
+    //glEnable( GL_DEPTH_TEST );
+    //glClearDepthf(1.0f);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable( GL_BLEND );
 
