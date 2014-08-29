@@ -479,7 +479,7 @@ int InitBilliardsTable( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
 
-    char * vShaderStr = loadShader( "shader/billiards.vert" );
+    char * vShaderStr = loadShader( "shader/table.vert" );
     char * fShaderStr = loadShader( "shader/table.frag" );
 
     // Load the shaders and get a linked program object
