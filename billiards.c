@@ -23,11 +23,13 @@
 #include "defines.h"
 
 #define NUM_PARTICLES	16
-#define PARTICLE_SIZE   4
+#define PARTICLE_SIZE   4 // Has velocity.
+#define PARTICLE_QUAD_SIZE 8 // Doesn't have velocity.
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
 #define POINT_RADIUS 0.02f
 #define POINT_ACCELERATION -0.2f
+#define PATICLES_QUAD_HALF_SIDELENGTH .2
 
 #define TABLE_SIDE_LENGTH 0.75f
 
@@ -103,6 +105,7 @@ typedef struct
 
     // Particles vertex data
     float particleData[ NUM_PARTICLES * PARTICLE_SIZE ];
+    float particleQuadData[ NUM_PARTICLES * PARTICLE_QUAD_SIZE ];
 
     // Current time
     float time;
@@ -266,6 +269,21 @@ int InitFBO ( ESContext *esContext )
     return TRUE;
 }
 
+void ParticleToQuad( const GLfloat * particle, GLfloat * quad )
+{
+    quad[0] = particle[0] + PATICLES_QUAD_HALF_SIDELENGTH; // bottom right.
+    quad[1] = particle[1] - PATICLES_QUAD_HALF_SIDELENGTH;
+
+    quad[2] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // top left
+    quad[3] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
+
+    quad[4] = particle[0] - PATICLES_QUAD_HALF_SIDELENGTH; // bottom left.
+    quad[5] = particle[1] - PATICLES_QUAD_HALF_SIDELENGTH;
+
+    quad[6] = particle[0] + PATICLES_QUAD_HALF_SIDELENGTH; // top right.
+    quad[7] = particle[1] + PATICLES_QUAD_HALF_SIDELENGTH;
+}
+
 int InitParticles ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
@@ -317,25 +335,19 @@ int InitParticles ( ESContext *esContext )
     for ( i = 0; i < NUM_PARTICLES; i++ )
     {
         GLfloat *particleData = &userData->particleData[i * PARTICLE_SIZE];
+        GLfloat *particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
 
         // Start position of particle
-        //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
-        //(*particleData++) = ( (float)(rand() % 10000) / 40000.0f ) - 0.125f;
-        (*particleData++) = (*pt++) + ((2 * TICK) + (2*BALL_SIZE));
-        (*particleData++) = (*pt++);
+        GLfloat *ptr = particleData;
+
+        (*ptr++) = (*pt++) + ((2 * TICK) + (2*BALL_SIZE));
+        (*ptr++) = (*pt++);
 
         // Velocities
-        //float v[2] = { 2 * randFloat() - 1, 2 * randFloat() - 1 };
-        //normalize2f(&v[0]);
-        //(*particleData++) = v[0];
-        //(*particleData++) = v[1];
-        if ( i == 0 ) {
-            (*particleData++) = 0.0f;
-            (*particleData++) = 0.0f;
-        } else {
-            (*particleData++) = 0.0f;
-            (*particleData++) = 0.0f;
-        }
+        (*ptr++) = 0.0f;
+        (*ptr++) = 0.0f;
+
+        ParticleToQuad(particleData, particleQuadData);
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
