@@ -30,6 +30,8 @@
 #define POINT_RADIUS 0.02f
 #define POINT_ACCELERATION -0.2f
 #define PATICLES_QUAD_HALF_SIDELENGTH .03
+#define TEXTURE_ATLAS_SIDE_LENGTH 256
+#define TEXTURE_ATLAS_IMAGE_SIZE 64
 
 #define TABLE_SIDE_LENGTH 0.75f
 
@@ -102,8 +104,7 @@ typedef struct
     GLint particlesUseTexture;
 
     // Particles Texture handle
-    //GLuint particlesTextureId;
-    GLuint *particlesTextures;
+    GLuint particlesTextureId;
 
     // Particles vertex data
     float particleData[ NUM_PARTICLES * PARTICLE_SIZE ];
@@ -362,19 +363,32 @@ int InitParticles ( ESContext *esContext )
         ParticleToQuad(particleData, particleQuadData);
     }
     // TODO: replace.
-    GLfloat particlesTex[] = {
-        1.0f, 0.0f, // Bottom right
-        0.0f, 1.0f, // Top left
-        0.0f, 0.0f, // Bottom left
-        0.0f, 1.0f, // Top left
-        1.0f, 0.0f, // Bottom right
-        1.0f, 1.0f  // Top right
-    };
     // Texture points are strided.
     for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         GLfloat *particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
-        int j = 1;
+        GLfloat startX = (i % 4) * TEXTURE_ATLAS_IMAGE_SIZE;
+        GLfloat startY = (i / 4) * TEXTURE_ATLAS_IMAGE_SIZE;
+        GLfloat particlesTex[] = {
+            (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
+            (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom right
+
+                                         startX / TEXTURE_ATLAS_SIDE_LENGTH,
+                                         startY / TEXTURE_ATLAS_SIDE_LENGTH, // Top left
+
+                                         startX / TEXTURE_ATLAS_SIDE_LENGTH,
+            (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom left
+
+                                         startX / TEXTURE_ATLAS_SIDE_LENGTH,
+                                         startY / TEXTURE_ATLAS_SIDE_LENGTH, // Top left
+
+            (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
+            (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom right
+
+            (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
+                                         startY / TEXTURE_ATLAS_SIDE_LENGTH  // Top right
+        };
         pt = &particlesTex[0];
+        int j = 1;
         for ( ; j <= (PARTICLE_QUAD_SIZE / PARTICLE_SIZE) ; ++j ) {
             particleQuadData[4*j-2] = (*pt++);
             particleQuadData[4*j-1] = (*pt++);
@@ -382,8 +396,8 @@ int InitParticles ( ESContext *esContext )
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
-    //userData->particlesTextureId = LoadPngTexture( "texture/4.png" );
-    LoadBallTextures( userData->particlesTextures );
+    userData->particlesTextureId = LoadPngTexture( "texture/balls.png" );
+    //LoadBallTextures( userData->particlesTextures );
     //userData->particlesTextureId = LoadWhiteTex();
     //if ( userData->particlesTextureId <= 0 )
     //{
@@ -885,7 +899,7 @@ void DrawParticles ( ESContext *esContext )
 
     // Bind the texture
     glActiveTexture ( GL_TEXTURE0 );
-    glBindTexture ( GL_TEXTURE_2D, userData->particlesTextures[8] );
+    glBindTexture ( GL_TEXTURE_2D, userData->particlesTextureId );
     glEnable ( GL_TEXTURE_2D );
 
     // Set the sampler texture unit to 0
@@ -1136,7 +1150,7 @@ void ShutDown ( ESContext *esContext )
     UserData *userData = esContext->userData;
 
     // Delete texture object
-    glDeleteTextures ( 16, &userData->particlesTextures[0] );
+    glDeleteTextures ( 1, &userData->particlesTextureId );
     glDeleteTextures ( 1, &userData->quadTextureId );
 
     // Delete program object
@@ -1201,9 +1215,6 @@ int main ( int argc, char *argv[] )
     // Setup renderToTexTexWidth/Height
     userData.renderToTexTexWidth = RENDER_TO_TEX_WIDTH;
     userData.renderToTexTexHeight = RENDER_TO_TEX_HEIGHT;
-
-    GLuint particlesTextures[16];
-    userData.particlesTextures = &particlesTextures[0];
 
     esInitContext ( &esContext );
     esContext.userData = &userData;
