@@ -27,15 +27,15 @@
 #define PARTICLE_QUAD_SIZE 24 // Doesn't have velocity.  Has texture coords.
 #define RENDER_TO_TEX_WIDTH 256
 #define RENDER_TO_TEX_HEIGHT 256
-#define POINT_RADIUS 0.02f
+#define POINT_RADIUS 0.024f
 #define POINT_ACCELERATION -0.2f
-#define PATICLES_QUAD_HALF_SIDELENGTH .03
+#define PATICLES_QUAD_HALF_SIDELENGTH .03f
 #define TEXTURE_ATLAS_SIDE_LENGTH 256
 #define TEXTURE_ATLAS_IMAGE_SIZE 64
 
 #define TABLE_SIDE_LENGTH 0.75f
 
-#define BALL_SIZE 0.033f
+#define BALL_SIZE 0.04f
 #define POINT_SIZE 30.0f
 
 // TODO: Use a texture for all but collision.
