@@ -32,6 +32,7 @@
 #define PATICLES_QUAD_HALF_SIDELENGTH .03f
 #define TEXTURE_ATLAS_SIDE_LENGTH 256
 #define TEXTURE_ATLAS_IMAGE_SIZE 64
+#define SMALL_TIME_STEP 0.02f
 
 #define TABLE_SIDE_LENGTH 0.75f
 
@@ -742,7 +743,8 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
         GLfloat *point = &particleData[i * PARTICLE_SIZE];
         unsigned int i;
         for ( i = 1 ; i < elementsSize ; i+=2 ) {
-            GLfloat v1[2], v2[2], v3[2];
+            GLfloat v1[2], v2[2], v3[2], v4[2], v5[2];
+            GLfloat point2[2];
             // TODO: maybe precompute this.
             v1[0] = v[2*e[i]] - v[2*e[i-1]];
             v1[1] = v[2*e[i]+1] - v[2*e[i-1]+1];
@@ -756,7 +758,17 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
             v3[1] = point[1] - v[2*e[i]+1];
             normalize2f(&v3[0]);
 
-            GLfloat result1, result2, result3;
+            // point2 is just point1 moved along its velocity a small time step.
+            point2[0] = point[0] + (SMALL_TIME_STEP * point[2]);
+            point2[1] = point[1] + (SMALL_TIME_STEP * point[3]);
+
+            v4[0] = point2[0] - v[2*e[i-1]];
+            v4[1] = point2[1] - v[2*e[i-1]+1];
+
+            v5[0] = point2[0] - v[2*e[i]];
+            v5[1] = point2[1] - v[2*e[i]+1];
+
+            GLfloat result1, result2, result3, result4, result5;
             UDotV(&result1, &v1[0], &v2[0], 2);
             result1 = acos(result1);
 
@@ -771,13 +783,19 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
 
             UDotV(&result3, &point[2], &normal[0], 2);
             GLfloat size;
+
+            UDotV(&result4, &v4[0], &normal[0], 2);
+            UDotV(&result5, &v5[0], &normal[0], 2);
+
             distanceSquared(&size, &v[2*e[i]], &v[2*e[i-1]], 2);
             size = sqrt(size);
 
-            if( ((result1 <= -0.14707f * size + 0.21279f && result2 < HALFPI)
-                    || (result2 <= -0.14707f * size + 0.21279f && result1 <
-                    HALFPI)) && result3 < 0.0f ) {
-                reflectAboutNormal2f(&point[2], &point[2], &normal[0]);
+            if ( result3 < 0.0f && result1 < HALFPI && result2 < HALFPI ) {
+                if( ((result1 <= -0.14707f * size + 0.21279f && result2 < HALFPI)
+                        || (result2 <= -0.14707f * size + 0.21279f && result1 <
+                        HALFPI)) || result4 < 0.0f || result5 < 0.0f ) {
+                    reflectAboutNormal2f(&point[2], &point[2], &normal[0]);
+                }
             }
         }
     }
