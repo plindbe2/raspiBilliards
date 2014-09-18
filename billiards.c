@@ -741,6 +741,8 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
     int i;
     for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         GLfloat *point = &particleData[i * PARTICLE_SIZE];
+        if ( point[0] == INFINITY )
+            continue;
         unsigned int i;
         for ( i = 1 ; i < elementsSize ; i+=2 ) {
             GLfloat v1[2], v2[2], v3[2], v4[2], v5[2];
@@ -794,7 +796,14 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
                 if( ((result1 <= -0.14707f * size + 0.21279f && result2 < HALFPI)
                         || (result2 <= -0.14707f * size + 0.21279f && result1 <
                         HALFPI)) || result4 < 0.0f || result5 < 0.0f ) {
-                    reflectAboutNormal2f(&point[2], &point[2], &normal[0]);
+                    if(((i - 1) / 2) % 4 == 1) {
+                        point[0] = INFINITY;
+                        point[1] = INFINITY;
+                        point[2] = 0.0f;
+                        point[3] = 0.0f;
+                    } else {
+                        reflectAboutNormal2f(&point[2], &point[2], &normal[0]);
+                    }
                 }
             }
         }
