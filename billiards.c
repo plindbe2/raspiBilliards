@@ -21,6 +21,7 @@
 #include "glesVMath.h"
 #include <sys/time.h>
 #include "defines.h"
+#include <time.h>
 
 #define NUM_PARTICLES	16
 #define PARTICLE_SIZE   4 // Has velocity.
@@ -49,6 +50,14 @@
 #define RAILS_INNER_HEIGHT 0.74189f
 
 #define TICK 0.38203f
+
+struct ball
+{
+    GLint number;
+    GLfloat *position;
+    GLfloat *velocity;
+    GLfloat *quad;
+};
 
 struct Ship
 {
@@ -110,6 +119,7 @@ typedef struct
     // Particles vertex data
     float particleData[ NUM_PARTICLES * PARTICLE_SIZE ];
     float particleQuadData[ NUM_PARTICLES * PARTICLE_QUAD_SIZE ];
+    struct ball balls[ NUM_PARTICLES ];
 
     // Current time
     float time;
@@ -297,6 +307,75 @@ void ParticleToQuad( const GLfloat * particle, GLfloat * quad )
 
 }
 
+// Texture points are strided.
+void AddTextureToQuad(GLfloat *particleQuadData, int ballNumber) {
+    GLfloat startX = (ballNumber % 4) * TEXTURE_ATLAS_IMAGE_SIZE;
+    GLfloat startY = (ballNumber / 4) * TEXTURE_ATLAS_IMAGE_SIZE;
+    GLfloat particlesTex[] = {
+        (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
+        (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom right
+
+                                     startX / TEXTURE_ATLAS_SIDE_LENGTH,
+                                     startY / TEXTURE_ATLAS_SIDE_LENGTH, // Top left
+
+                                     startX / TEXTURE_ATLAS_SIDE_LENGTH,
+        (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom left
+
+                                     startX / TEXTURE_ATLAS_SIDE_LENGTH,
+                                     startY / TEXTURE_ATLAS_SIDE_LENGTH, // Top left
+
+        (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
+        (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom right
+
+        (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
+                                     startY / TEXTURE_ATLAS_SIDE_LENGTH  // Top right
+    };
+    GLfloat *pt = &particlesTex[0];
+    int j = 1;
+    for ( ; j <= (PARTICLE_QUAD_SIZE / PARTICLE_SIZE) ; ++j ) {
+        particleQuadData[4*j-2] = (*pt++);
+        particleQuadData[4*j-1] = (*pt++);
+    }
+}
+
+int InitBalls( ESContext *esContext )
+{
+    UserData *userData = esContext->userData;
+    srand ( time(NULL) );
+    GLint ballOrder[ NUM_PARTICLES ];
+    GLint i;
+    for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
+        ballOrder[i] = i;
+    }
+    // shuffle
+    int eightBallPos = NUM_PARTICLES - 1;
+    for( i = 1 ; i < NUM_PARTICLES-1 ; ++i ) {
+        int j = i + rand() / (RAND_MAX / (NUM_PARTICLES - i) + 1);
+        int t = ballOrder[j];
+        if( ballOrder[j] == 8 ){
+            eightBallPos = i;
+        }
+        ballOrder[j] = ballOrder[i];
+        ballOrder[i] = t;
+    }
+
+    // This is where the 8 ball must go.
+    int t = ballOrder[5];
+    ballOrder[5] = ballOrder[eightBallPos];
+    ballOrder[eightBallPos] = t;
+
+    for ( i = 0; i < NUM_PARTICLES; ++i )
+    {
+        GLfloat *particleData = &userData->particleData[i * PARTICLE_SIZE];
+        GLfloat *particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
+        userData->balls[ballOrder[i]].position = particleData;
+        userData->balls[ballOrder[i]].velocity = particleData + 2;
+        userData->balls[ballOrder[i]].quad = particleQuadData;
+        AddTextureToQuad(particleQuadData, ballOrder[i]);
+    }
+    return TRUE;
+}
+
 int InitParticles ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
@@ -321,7 +400,7 @@ int InitParticles ( ESContext *esContext )
     userData->particlesPointSize = glGetUniformLocation ( userData->particlesProgram, "u_pointSize" );
     userData->particlesUseTexture = glGetUniformLocation ( userData->particlesProgram, "u_useTexture" );
     // Fill in particle data array
-    srand ( 0 );
+    //srand ( 0 );
     float poolPts [] = {
               -4 * TICK - (2*BALL_SIZE),    0.0f, // white ball
 
@@ -362,38 +441,6 @@ int InitParticles ( ESContext *esContext )
         (*ptr++) = 0.0f;
 
         ParticleToQuad(particleData, particleQuadData);
-    }
-    // TODO: replace.
-    // Texture points are strided.
-    for ( i = 0 ; i < NUM_PARTICLES ; ++i ) {
-        GLfloat *particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
-        GLfloat startX = (i % 4) * TEXTURE_ATLAS_IMAGE_SIZE;
-        GLfloat startY = (i / 4) * TEXTURE_ATLAS_IMAGE_SIZE;
-        GLfloat particlesTex[] = {
-            (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
-            (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom right
-
-                                         startX / TEXTURE_ATLAS_SIDE_LENGTH,
-                                         startY / TEXTURE_ATLAS_SIDE_LENGTH, // Top left
-
-                                         startX / TEXTURE_ATLAS_SIDE_LENGTH,
-            (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom left
-
-                                         startX / TEXTURE_ATLAS_SIDE_LENGTH,
-                                         startY / TEXTURE_ATLAS_SIDE_LENGTH, // Top left
-
-            (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
-            (startY + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH, // Bottom right
-
-            (startX + TEXTURE_ATLAS_IMAGE_SIZE) / TEXTURE_ATLAS_SIDE_LENGTH,
-                                         startY / TEXTURE_ATLAS_SIDE_LENGTH  // Top right
-        };
-        pt = &particlesTex[0];
-        int j = 1;
-        for ( ; j <= (PARTICLE_QUAD_SIZE / PARTICLE_SIZE) ; ++j ) {
-            particleQuadData[4*j-2] = (*pt++);
-            particleQuadData[4*j-1] = (*pt++);
-        }
     }
 
     //userData->particlesTextureId = LoadTexture ( "texture/smoke.tga" );
@@ -577,6 +624,9 @@ int InitBilliardsTable( ESContext *esContext )
 int Init ( ESContext *esContext )
 {
     UserData *userData = esContext->userData;
+    if ( !InitBalls(esContext) ) {
+        return FALSE;
+    }
     if ( !InitParticles(esContext) ) {
         return FALSE;
     }
