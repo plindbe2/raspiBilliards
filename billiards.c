@@ -347,13 +347,23 @@ int InitBalls( ESContext *esContext )
     for( i = 0 ; i < NUM_PARTICLES ; ++i ) {
         ballOrder[i] = i;
     }
-    // shuffle
+    // 8 ball needs to go in position 5.  A stipe and solid must compose the
+    // back corners.
+    GLint stripeBallPos = NUM_PARTICLES - 1;
+    GLint solidBallPos = NUM_PARTICLES - 1;
     int eightBallPos = NUM_PARTICLES - 1;
+    // shuffle
     for( i = 1 ; i < NUM_PARTICLES-1 ; ++i ) {
         int j = i + rand() / (RAND_MAX / (NUM_PARTICLES - i) + 1);
         int t = ballOrder[j];
-        if( ballOrder[j] == 8 ){
+        if( ballOrder[j] == 8 ) {
             eightBallPos = i;
+        }
+        if ( ballOrder[j] > 8 && i != 5 ) {
+            stripeBallPos = i;
+        }
+        if ( ballOrder[j] < 8 && i != 5 ) {
+            solidBallPos = i;
         }
         ballOrder[j] = ballOrder[i];
         ballOrder[i] = t;
@@ -363,6 +373,16 @@ int InitBalls( ESContext *esContext )
     int t = ballOrder[5];
     ballOrder[5] = ballOrder[eightBallPos];
     ballOrder[eightBallPos] = t;
+
+    if ( ballOrder[11] < 8 && ballOrder[15] < 8 ) {
+        t = ballOrder[11];
+        ballOrder[11] = ballOrder[stripeBallPos];
+        ballOrder[stripeBallPos] = t;
+    } else if ( ballOrder[11] > 8 && ballOrder[15] > 8 ) {
+        t = ballOrder[11];
+        ballOrder[11] = ballOrder[solidBallPos];
+        ballOrder[solidBallPos] = t;
+    }
 
     for ( i = 0; i < NUM_PARTICLES; ++i )
     {
