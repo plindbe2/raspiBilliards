@@ -49,7 +49,11 @@
 
 #define RAILS_INNER_HEIGHT 0.74189f
 
-#define TICK 0.38203f
+#define H_TICK 0.38203f
+#define V_TICK 0.39463f
+
+#define WIDTH  1.48378f
+#define HEIGHT 0.74189f
 
 struct ball
 {
@@ -57,6 +61,12 @@ struct ball
     GLfloat *position;
     GLfloat *velocity;
     GLfloat *quad;
+};
+
+struct player
+{
+    GLuint isSolid;
+    GLuint score;
 };
 
 struct Ship
@@ -120,6 +130,7 @@ typedef struct
     float particleData[ NUM_PARTICLES * PARTICLE_SIZE ];
     float particleQuadData[ NUM_PARTICLES * PARTICLE_QUAD_SIZE ];
     struct ball balls[ NUM_PARTICLES ];
+    struct player players[ 2 ];
 
     // Current time
     float time;
@@ -163,12 +174,13 @@ typedef struct
     GLuint tableProgram;
     struct Table * table;
     GLuint tableStartPositionLoc;
-    GLuint tableTimeLoc;
+    //GLuint tableTimeLoc;
     GLuint tableColorLoc;
     GLuint tablePointSize;
 
     float pauseTime;
     ESMatrix tableMVP;
+    GLint tableMVPLoc;
 
 } UserData;
 
@@ -422,7 +434,7 @@ int InitParticles ( ESContext *esContext )
     // Fill in particle data array
     //srand ( 0 );
     float poolPts [] = {
-              -4 * TICK - (2*BALL_SIZE),    0.0f, // white ball
+              //-4 * H_TICK - (2*BALL_SIZE),    0.0f, // white ball
 
               0.0f,        0.0f, // row 1
 
@@ -445,7 +457,7 @@ int InitParticles ( ESContext *esContext )
         4*BALL_SIZE,  4*BALL_SIZE,
     };
     GLfloat *pt = &poolPts[0];
-    for ( i = 0; i < NUM_PARTICLES; i++ )
+    for ( i = 1; i < NUM_PARTICLES; i++ )
     {
         GLfloat *particleData = &userData->particleData[i * PARTICLE_SIZE];
         GLfloat *particleQuadData = &userData->particleQuadData[i * PARTICLE_QUAD_SIZE];
@@ -453,7 +465,7 @@ int InitParticles ( ESContext *esContext )
         // Start position of particle
         GLfloat *ptr = particleData;
 
-        (*ptr++) = (*pt++) + ((2 * TICK) + (2*BALL_SIZE));
+        (*ptr++) = (*pt++) + ((2 * H_TICK) + (2*BALL_SIZE));
         (*ptr++) = (*pt++);
 
         // Velocities
@@ -616,9 +628,10 @@ int InitBilliardsTable( ESContext *esContext )
     userData->tableStartPositionLoc = glGetAttribLocation ( userData->tableProgram, "a_startPosition" );
 
     // Get the uniform locations
-    userData->tableTimeLoc = glGetUniformLocation ( userData->tableProgram, "u_time" );
+    //userData->tableTimeLoc = glGetUniformLocation ( userData->tableProgram, "u_time" );
     userData->tableColorLoc = glGetUniformLocation ( userData->tableProgram, "u_color" );
     userData->tablePointSize = glGetUniformLocation ( userData->tableProgram, "u_pointSize" );
+    userData->tableMVPLoc = glGetUniformLocation ( userData->particlesProgram, "u_MVP" );
 
     if ( !InitTable(esContext) ) {
         return FALSE;
@@ -653,6 +666,16 @@ int Init ( ESContext *esContext )
     if ( !InitBilliardsTable(esContext) ) {
         return FALSE;
     }
+    GLfloat x = 0.0f, y = 0.0f;
+    Draw(esContext);
+    eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
+    while(x < -WIDTH || x > -2*H_TICK || y < -HEIGHT || y > 2*HEIGHT) {
+        printf("Enter white ball start position [%.3f, %.3f], [%.3f, %.3f]: ", -WIDTH, -2*H_TICK, -HEIGHT, HEIGHT);
+        scanf("%f %f", &x, &y);
+    }
+    GLfloat *particle = &userData->particleData[ 0 ];
+    particle[0] = x;
+    particle[1] = y;
     //if ( !InitQuad(esContext) ) {
     //    return FALSE;
     //}
@@ -937,8 +960,8 @@ void Update ( ESContext *esContext, float deltaTime )
 
     glUseProgram ( userData->particlesProgram );
     glUniform1f ( userData->particlesTimeLoc, userData->time );
-    glUseProgram ( userData->tableProgram );
-    glUniform1f ( userData->tableTimeLoc, userData->time );
+    //glUseProgram ( userData->tableProgram );
+    //glUniform1f ( userData->tableTimeLoc, userData->time );
     float scanfTime = 0.0f;
     if (!CheckForMovement( particleData )) {
         printf("Enter Velocity: ");
@@ -1124,7 +1147,7 @@ void DrawBilliardsTable( ESContext *esContext )
     UserData *userData = esContext->userData;
     glUseProgram (userData->tableProgram);
 
-    glUniformMatrix4fv(userData->particlesMVPLoc, 1, GL_FALSE,
+    glUniformMatrix4fv(userData->tableMVPLoc, 1, GL_FALSE,
                        &userData->tableMVP.m[0][0]);
     DrawTable(esContext);
     DrawRails(esContext);

@@ -1,4 +1,3 @@
-uniform float u_time;
 uniform mat4 u_MVP;
 uniform float u_pointSize;
 attribute vec2 a_startPosition;
