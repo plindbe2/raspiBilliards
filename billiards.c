@@ -120,7 +120,6 @@ typedef struct
     GLint particlesTimeLoc;
     GLint particlesColorLoc;
     GLint particlesSamplerLoc;
-    GLint particlesPointSize;
     GLint particlesUseTexture;
 
     // Particles Texture handle
@@ -176,7 +175,6 @@ typedef struct
     GLuint tableStartPositionLoc;
     //GLuint tableTimeLoc;
     GLuint tableColorLoc;
-    GLuint tablePointSize;
 
     float pauseTime;
     ESMatrix tableMVP;
@@ -429,7 +427,6 @@ int InitParticles ( ESContext *esContext )
     userData->particlesTimeLoc = glGetUniformLocation ( userData->particlesProgram, "u_time" );
     userData->particlesColorLoc = glGetUniformLocation ( userData->particlesProgram, "u_color" );
     userData->particlesSamplerLoc = glGetUniformLocation ( userData->particlesProgram, "s_texture" );
-    userData->particlesPointSize = glGetUniformLocation ( userData->particlesProgram, "u_pointSize" );
     userData->particlesUseTexture = glGetUniformLocation ( userData->particlesProgram, "u_useTexture" );
     // Fill in particle data array
     //srand ( 0 );
@@ -519,8 +516,6 @@ int InitParticles ( ESContext *esContext )
     memcpy(&userData->particlesColor[0], &color[0], sizeof(float) * 4);
 
     glUniform4fv ( userData->particlesColorLoc, 1, &color[0] );
-    // TODO: Make this a function of resolution and remove POINT_RADIUS
-    glUniform1f ( userData->particlesPointSize, POINT_SIZE );
 
     return TRUE;
 }
@@ -630,7 +625,6 @@ int InitBilliardsTable( ESContext *esContext )
     // Get the uniform locations
     //userData->tableTimeLoc = glGetUniformLocation ( userData->tableProgram, "u_time" );
     userData->tableColorLoc = glGetUniformLocation ( userData->tableProgram, "u_color" );
-    userData->tablePointSize = glGetUniformLocation ( userData->tableProgram, "u_pointSize" );
     userData->tableMVPLoc = glGetUniformLocation ( userData->particlesProgram, "u_MVP" );
 
     if ( !InitTable(esContext) ) {
