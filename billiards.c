@@ -120,7 +120,6 @@ typedef struct
     GLint particlesTimeLoc;
     GLint particlesColorLoc;
     GLint particlesSamplerLoc;
-    GLint particlesUseTexture;
 
     // Particles Texture handle
     GLuint particlesTextureId;
@@ -427,7 +426,6 @@ int InitParticles ( ESContext *esContext )
     userData->particlesTimeLoc = glGetUniformLocation ( userData->particlesProgram, "u_time" );
     userData->particlesColorLoc = glGetUniformLocation ( userData->particlesProgram, "u_color" );
     userData->particlesSamplerLoc = glGetUniformLocation ( userData->particlesProgram, "s_texture" );
-    userData->particlesUseTexture = glGetUniformLocation ( userData->particlesProgram, "u_useTexture" );
     // Fill in particle data array
     //srand ( 0 );
     float poolPts [] = {
@@ -984,8 +982,6 @@ void DrawParticles ( ESContext *esContext )
 
     // Use the program object
     glUseProgram ( userData->particlesProgram );
-    // This changes when we call DrawTable.
-    glUniform1i ( userData->particlesUseTexture, 1 );
 
     //glVertexAttribPointer ( userData->particlesStartPositionLoc, 2, GL_FLOAT,
     //        GL_FALSE, PARTICLE_SIZE * sizeof(GLfloat),
@@ -1079,6 +1075,7 @@ void DrawTable( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTable[0] );
+    glEnableVertexAttribArray ( userData->tableStartPositionLoc );
     //glDisable( GL_DEPTH_TEST );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
@@ -1096,6 +1093,7 @@ void DrawRails( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vRails[0] );
+    glEnableVertexAttribArray ( userData->tableStartPositionLoc );
     glDisable( GL_DEPTH_TEST );
     glEnable ( GL_BLEND );
     //glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
@@ -1113,6 +1111,7 @@ void DrawHoles( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vHoles[0] );
+    glEnableVertexAttribArray ( userData->tableStartPositionLoc );
     //glDisable( GL_DEPTH_TEST );
     //glDisable ( GL_BLEND );
     glDrawElements ( GL_TRIANGLES, userData->table->holesElementsSize,
@@ -1129,6 +1128,7 @@ void DrawTicks( ESContext *esContext )
 
     glVertexAttribPointer ( userData->tableStartPositionLoc, 2, GL_FLOAT,
             GL_FALSE, 0, &userData->table->vTicks[0] );
+    glEnableVertexAttribArray ( userData->tableStartPositionLoc );
     //glDisable( GL_DEPTH_TEST );
     glEnable ( GL_BLEND );
     glBlendFunc ( GL_SRC_ALPHA, GL_ONE );
