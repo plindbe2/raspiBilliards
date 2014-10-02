@@ -452,6 +452,13 @@ int InitParticles ( ESContext *esContext )
         4*BALL_SIZE,  4*BALL_SIZE,
     };
     GLfloat *pt = &poolPts[0];
+    {
+        GLfloat *particleData = &userData->particleData[0 * PARTICLE_SIZE];
+        particleData[0] = INFINITY;
+        particleData[1] = INFINITY;
+        particleData[2] = 0.0f;
+        particleData[3] = 0.0f;
+    }
     for ( i = 1; i < NUM_PARTICLES; i++ )
     {
         GLfloat *particleData = &userData->particleData[i * PARTICLE_SIZE];
@@ -658,16 +665,31 @@ int Init ( ESContext *esContext )
     if ( !InitBilliardsTable(esContext) ) {
         return FALSE;
     }
-    GLfloat x = 0.0f, y = 0.0f;
+    glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
     Draw(esContext);
     eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
-    while(x < -WIDTH || x > -2*H_TICK || y < -HEIGHT || y > 2*HEIGHT) {
-        printf("Enter white ball start position [%.3f, %.3f], [%.3f, %.3f]: ", -WIDTH, -2*H_TICK, -HEIGHT, HEIGHT);
-        scanf("%f %f", &x, &y);
-    }
-    GLfloat *particle = &userData->particleData[ 0 ];
-    particle[0] = x;
-    particle[1] = y;
+    char c;
+    do {
+        GLfloat x, y;
+        do {
+            printf("Enter white ball start position [%.3f, %.3f], [%.3f, %.3f]: ", -WIDTH, -2*H_TICK, -HEIGHT, HEIGHT);
+            scanf("%f %f", &x, &y);
+        } while(x < -WIDTH || x > -2*H_TICK || y < -HEIGHT || y > 2*HEIGHT);
+
+        GLfloat *particleData = &userData->particleData[ 0 ];
+        GLfloat *particleQuadData = &userData->particleQuadData[ 0 ];
+        particleData[0] = x;
+        particleData[1] = y;
+        ParticleToQuad(particleData, particleQuadData);
+
+        glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
+        Draw(esContext);
+        eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
+
+        printf("Confirm [y/n]: ");
+        scanf(" %c", &c);
+
+    } while( c != 'y');
     //if ( !InitQuad(esContext) ) {
     //    return FALSE;
     //}
