@@ -650,6 +650,46 @@ int InitBilliardsTable( ESContext *esContext )
     return TRUE;
 }
 
+GLfloat PlaceBall( ESContext *esContext, struct ball ball, GLfloat *boundary )
+{
+    GLfloat left   = boundary[0];
+    GLfloat right  = boundary[1];
+    GLfloat top    = boundary[2];
+    GLfloat bottom = boundary[3];
+    char c;
+    struct timeval t1, t2;
+    struct timezone tz;
+    gettimeofday ( &t1 , &tz );
+
+    do {
+
+        GLfloat x, y;
+        do {
+            printf("Enter position [%.3f, %.3f], [%.3f, %.3f]: ", left, right, bottom, top);
+            scanf("%f %f", &x, &y);
+        } while( x < left || x > right || y < bottom || y > top );
+
+        ball.position[0] = x;
+        ball.position[1] = y;
+
+        ball.velocity[0] = 0.0f;
+        ball.velocity[1] = 0.0f;
+
+        ParticleToQuad(ball.position, ball.quad);
+
+        glClearColor ( 0.0f, 0.0f, 0.0f, 1.0f );
+        Draw(esContext);
+        eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
+
+        printf("Confirm [y/n]: ");
+        scanf(" %c", &c);
+    } while ( c != 'y' );
+
+    gettimeofday ( &t2, &tz );
+    GLfloat scanfTime = (float)(t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6);
+    return scanfTime;
+}
+
 ///
 // Initialize the shader and program object
 //
@@ -689,7 +729,7 @@ int Init ( ESContext *esContext )
         printf("Confirm [y/n]: ");
         scanf(" %c", &c);
 
-    } while( c != 'y');
+    } while( c != 'y' );
     //if ( !InitQuad(esContext) ) {
     //    return FALSE;
     //}
@@ -904,6 +944,7 @@ void CheckForBoundaryCollisions( GLfloat *particleData, GLfloat *v, GLushort
                         || (result2 <= -0.14707f * size + 0.21279f && result1 <
                         HALFPI)) || result4 < 0.0f || result5 < 0.0f ) {
                     if(((i - 1) / 2) % 4 == 1) {
+                        // This makes me cringe.
                         point[0] = INFINITY;
                         point[1] = INFINITY;
                         point[2] = 0.0f;
@@ -978,6 +1019,11 @@ void Update ( ESContext *esContext, float deltaTime )
     //glUniform1f ( userData->tableTimeLoc, userData->time );
     float scanfTime = 0.0f;
     if (!CheckForMovement( particleData )) {
+        if ( userData->balls[0].position[0] == INFINITY &&
+             userData->balls[0].position[1] == INFINITY ) {
+            GLfloat boundary[] = { -WIDTH, WIDTH, HEIGHT, -HEIGHT };
+            scanfTime += PlaceBall( esContext, userData->balls[0], &boundary[0] );
+        }
         printf("Enter Velocity: ");
         float x, y;
         struct timeval t1, t2;
@@ -985,7 +1031,7 @@ void Update ( ESContext *esContext, float deltaTime )
         gettimeofday ( &t1 , &tz );
         scanf("%f %f", &x, &y);
         gettimeofday( &t2, &tz );
-        scanfTime = (float)(t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6);
+        scanfTime += (float)(t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6);
         particleData[2] = (GLfloat) x;
         particleData[3] = (GLfloat) y;
     }
