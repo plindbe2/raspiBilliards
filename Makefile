@@ -14,8 +14,8 @@ COMMONSRC=esShader.c    \
           esShapes.c    \
           esUtil.c
 
-vpath %.c ../src
-vpath %.h ../include
+vpath %.c ./src
+vpath %.h ./include
 
 CC = gcc
 CFLAGS=-Wall
