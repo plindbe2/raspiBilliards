@@ -8,4 +8,8 @@ This project is written in openGLES 2.0 for the raspberry pi.  Some additional f
 https://code.google.com/p/opengles-book-samples/wiki/Instructions
 They're listed in the Makefile.
 
+src/glesTools.c has a functional obj loader.
+
+This code is licensed under the GPL-3 license.
+
 Good luck in your coding.  I hope this helps someone.
