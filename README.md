@@ -1,6 +1,6 @@
 # raspiBilliards
 raspiBilliards
-This is an old project of mine that I've abandoned.  You can sort of play billiards with yourself (without keeping score or having any rules).  The code is pretty awful and it's full of comments that I didn't bother removing.
+This is an old project of mine.  You can play billiards with yourself without keeping score or having any rules.
 
 There is collision detection with some hacks where I rewind the action to the point of impact in an attempt to avoid balls falling into each other or rotating around each other.
 
